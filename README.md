@@ -8,7 +8,7 @@ In order to properly set up the repository, download the `morphology_EQ_Geneva.x
 Using `conda`, create a new environment and activate it.
 
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yaml
 conda activate mlenv
 ```
 
@@ -27,7 +27,7 @@ Before pushing the code to the repository, make sure to:
 2. Document the steps properly
 3. Use the bash command `pipreqs --force` to overwrite the `requirements.txt` file with new libraries
 4. In general, always check the modified files with `git status` before commits
- 
+
 ## Project Structure
 
 The complete outline for this project should look like:
