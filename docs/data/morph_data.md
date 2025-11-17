@@ -2,7 +2,7 @@
 
 Here is the summary of the morphological and environmental quality split of the data available in the provided Microsoft Teams folder
 
-## Sheet : Morphological Data
+## Sheet: Morphological Data
 
 Core morphological features, already standardized and aggregated per neighborhood.
 
@@ -10,12 +10,12 @@ Core morphological features, already standardized and aggregated per neighborhoo
 
 These represent latent dimensions of urban morphology extracted via PCA from building and street-level descriptors most likely
 
-`PC1` (float - dimensionless)
-`PC2` (float - dimensionless)
-`PC3` (float - dimensionless)
-`PC4` (float - dimensionless)
-`PC5` (float - dimensionless)
-`PC6` (float - dimensionless)
+* `PC1` (float - dimensionless)
+* `PC2` (float - dimensionless)
+* `PC3` (float - dimensionless)
+* `PC4` (float - dimensionless)
+* `PC5` (float - dimensionless)
+* `PC6` (float - dimensionless)
 
 ### Typology:
 
