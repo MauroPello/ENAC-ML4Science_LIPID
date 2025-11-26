@@ -9,3 +9,4 @@ dependencies:
   - openpyxl
   - seaborn
   - scikit-learn
+  - statsmodels
