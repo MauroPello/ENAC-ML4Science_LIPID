@@ -1,11 +1,4 @@
-"""Feature configuration utilities used across the analysis pipeline."""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import List, Tuple
-
-DEFAULT_CONTINUOUS_FEATURES: List[str] = [
+ALL_CONTINUOUS_FEATURES: list[str] = [
     "PC1",
     "PC2",
     "PC3",
@@ -26,7 +19,7 @@ DEFAULT_CONTINUOUS_FEATURES: List[str] = [
     "GHQ12_score",
 ]
 
-DEFAULT_CATEGORICAL_FEATURES: List[str] = [
+ALL_CATEGORICAL_FEATURES: list[str] = [
     "typology",
     "sex",
     "income",
@@ -34,7 +27,7 @@ DEFAULT_CATEGORICAL_FEATURES: List[str] = [
     "age_bin",
 ]
 
-DEFAULT_BINARY_FEATURES: List[str] = [
+ALL_BINARY_FEATURES: list[str] = [
     "heart_failure",
     "heart_rhythm",
     "sleep_disorder_hot",
@@ -42,7 +35,7 @@ DEFAULT_BINARY_FEATURES: List[str] = [
     "d_breath_asthma",
 ]
 
-POSSIBLE_TARGETS: List[str] = [
+POSSIBLE_TARGET_FEATURES: list[str] = [
     "points_sleep_deprivation",
     "sleeping_hours",
     "sleep_disorder_hot",
@@ -55,35 +48,13 @@ POSSIBLE_TARGETS: List[str] = [
 ]
 
 
-@dataclass(frozen=True)
-class FeatureSets:
-    """Container describing available feature groups."""
-
-    continuous: Tuple[str, ...]
-    categorical: Tuple[str, ...]
-    binary: Tuple[str, ...]
-
-    @classmethod
-    def default(cls) -> "FeatureSets":
-        return cls(
-            continuous=tuple(DEFAULT_CONTINUOUS_FEATURES),
-            categorical=tuple(DEFAULT_CATEGORICAL_FEATURES),
-            binary=tuple(DEFAULT_BINARY_FEATURES),
-        )
-
-    def as_allowed_columns(self) -> set:
-        allowed = set(self.continuous)
-        allowed.update(self.categorical)
-        allowed.update(self.binary)
-        return allowed
-
-
-def determine_target_type(target_feature: str, feature_sets: FeatureSets) -> str:
+def determine_target_type(target_feature: str) -> str:
     """Infer whether the selected target is continuous, categorical, or binary."""
-    if target_feature in feature_sets.continuous:
+
+    if target_feature in ALL_CONTINUOUS_FEATURES:
         return "continuous"
-    if target_feature in feature_sets.categorical:
+    if target_feature in ALL_CATEGORICAL_FEATURES:
         return "categorical"
-    if target_feature in feature_sets.binary:
+    if target_feature in ALL_BINARY_FEATURES:
         return "binary"
     raise ValueError(f"Target feature '{target_feature}' is not recognized.")

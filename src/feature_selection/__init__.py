@@ -1,35 +1,34 @@
-"""Feature selection helpers split by target modality."""
-
-from __future__ import annotations
-
-from typing import Dict, Iterable, List, Tuple
-
 import pandas as pd
 
-from src.feature_config import FeatureSets, determine_target_type
+from src.feature_config import (
+    ALL_CATEGORICAL_FEATURES,
+    ALL_BINARY_FEATURES,
+    ALL_CONTINUOUS_FEATURES,
+    determine_target_type,
+)
 
 from .binary import evaluate_binary_target
 from .categorical import evaluate_categorical_target
 from .continuous import compute_vif, evaluate_continuous_target
 
-PredictorRegistry = List[Tuple[str, str]]
+PredictorRegistry = list[tuple[str, str]]
 
 
 def _build_predictor_registry(
-    df: pd.DataFrame, feature_sets: FeatureSets, target_feature: str
+    df: pd.DataFrame, target_feature: str
 ) -> PredictorRegistry:
     registry: PredictorRegistry = []
     registered = set()
     for column in df.columns:
         if column == target_feature:
             continue
-        if column in feature_sets.continuous and column not in registered:
+        if column in ALL_CONTINUOUS_FEATURES and column not in registered:
             registry.append((column, "continuous"))
             registered.add(column)
-        elif column in feature_sets.binary and column not in registered:
+        elif column in ALL_BINARY_FEATURES and column not in registered:
             registry.append((column, "binary"))
             registered.add(column)
-        elif column in feature_sets.categorical and column not in registered:
+        elif column in ALL_CATEGORICAL_FEATURES and column not in registered:
             registry.append((column, "categorical"))
             registered.add(column)
     return registry
@@ -38,14 +37,14 @@ def _build_predictor_registry(
 def compute_associations(
     df: pd.DataFrame,
     target_feature: str,
-    feature_sets: FeatureSets,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run univariate association tests and multicollinearity diagnostics."""
-    target_type = determine_target_type(target_feature, feature_sets)
-    predictor_registry = _build_predictor_registry(df, feature_sets, target_feature)
 
-    association_records: List[Dict[str, float]] = []
-    vif_records: List[Dict[str, float]] = []
+    target_type = determine_target_type(target_feature)
+    predictor_registry = _build_predictor_registry(df, target_feature)
+
+    association_records: list[dict[str, float]] = []
+    vif_records: list[dict[str, float]] = []
 
     if target_type == "continuous":
         association_records, vif_records = evaluate_continuous_target(

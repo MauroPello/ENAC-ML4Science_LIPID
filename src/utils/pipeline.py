@@ -1,26 +1,11 @@
-"""Utility functions for the analysis pipeline notebook.
-
-This module centralizes data loading, feature engineering, association testing,
-and model training helpers so the companion notebook can remain concise and
-focus on orchestration and visualization.
-"""
-
-from __future__ import annotations
-
-from typing import Dict, Iterable, List, Tuple
-
+from typing import Iterable
 import pandas as pd
 
 from src.feature_config import (
-    DEFAULT_BINARY_FEATURES,
-    DEFAULT_CATEGORICAL_FEATURES,
-    DEFAULT_CONTINUOUS_FEATURES,
-    FeatureSets,
-    POSSIBLE_TARGETS,
-    determine_target_type,
+    ALL_CATEGORICAL_FEATURES,
+    ALL_BINARY_FEATURES,
+    ALL_CONTINUOUS_FEATURES,
 )
-from src.feature_selection import compute_associations as _compute_associations
-from src.predictive import run_modeling_suite as _run_modeling_suite
 
 
 def load_combined_dataset(
@@ -30,6 +15,7 @@ def load_combined_dataset(
     clinical_sheet: str = "Participant_HEALTH_Data",
 ) -> pd.DataFrame:
     """Load and merge morphology and health data into a single DataFrame."""
+
     morph_df = pd.read_csv(morph_csv_path)
     if "id" in morph_df.columns and "neighborhood_id" not in morph_df.columns:
         morph_df = morph_df.rename(columns={"id": "neighborhood_id"})
@@ -54,6 +40,7 @@ def assign_age_quantile_bins(
     max_bins: int = 4,
 ) -> pd.DataFrame:
     """Create quantile-based age bins so each bin has comparable counts."""
+
     df = df.copy()
     if age_column not in df.columns:
         df[output_column] = pd.NA
@@ -70,7 +57,7 @@ def assign_age_quantile_bins(
         duplicates="drop",
     )
 
-    age_labels: List[str] = []
+    age_labels = []
     for idx, interval in enumerate(age_bin_series.cat.categories):
         left_edge = interval.left
         right_edge = interval.right
@@ -88,11 +75,13 @@ def assign_age_quantile_bins(
 
 def build_feature_matrix(
     df: pd.DataFrame,
-    feature_sets: FeatureSets,
     excluded_targets: Iterable[str] = (),
 ) -> pd.DataFrame:
     """Prepare the feature matrix used for modeling."""
-    allowed_columns = feature_sets.as_allowed_columns()
+
+    allowed_columns = (
+        ALL_CATEGORICAL_FEATURES + ALL_BINARY_FEATURES + ALL_CONTINUOUS_FEATURES
+    )
     exclusions = set(excluded_targets)
     features = df.drop(
         columns=[
@@ -101,56 +90,9 @@ def build_feature_matrix(
         errors="ignore",
     )
 
-    for col in feature_sets.categorical:
+    for col in ALL_CATEGORICAL_FEATURES:
         if col in features.columns and col not in exclusions:
             dummies = pd.get_dummies(features[col], prefix=col)
             features = pd.concat([features.drop(columns=[col]), dummies], axis=1)
 
     return features
-
-
-def compute_associations(
-    df: pd.DataFrame,
-    target_feature: str,
-    feature_sets: FeatureSets,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Delegate association computations to the feature selection package."""
-    return _compute_associations(
-        df=df,
-        target_feature=target_feature,
-        feature_sets=feature_sets,
-    )
-
-
-def run_modeling_suite(
-    features: pd.DataFrame,
-    target: pd.Series,
-    target_feature: str,
-    feature_sets: FeatureSets,
-    test_size: float = 0.2,
-    random_state: int = 42,
-) -> Dict[str, object]:
-    """Train baseline models suited to the target type."""
-    return _run_modeling_suite(
-        features=features,
-        target=target,
-        target_feature=target_feature,
-        feature_sets=feature_sets,
-        test_size=test_size,
-        random_state=random_state,
-    )
-
-
-__all__ = [
-    "assign_age_quantile_bins",
-    "build_feature_matrix",
-    "compute_associations",
-    "determine_target_type",
-    "FeatureSets",
-    "load_combined_dataset",
-    "POSSIBLE_TARGETS",
-    "run_modeling_suite",
-    "DEFAULT_CONTINUOUS_FEATURES",
-    "DEFAULT_CATEGORICAL_FEATURES",
-    "DEFAULT_BINARY_FEATURES",
-]

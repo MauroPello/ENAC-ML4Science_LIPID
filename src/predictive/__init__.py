@@ -1,13 +1,7 @@
-"""Predictive modeling orchestration utilities."""
-
-from __future__ import annotations
-
-from typing import Dict
-
 import numpy as np
 import pandas as pd
 
-from src.feature_config import FeatureSets, determine_target_type
+from src.feature_config import determine_target_type
 
 from .classification import run_classification_models
 from .regression import run_regression_models
@@ -17,13 +11,13 @@ def run_modeling_suite(
     features: pd.DataFrame,
     target: pd.Series,
     target_feature: str,
-    feature_sets: FeatureSets,
     *,
     test_size: float = 0.2,
     random_state: int = 42,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """Train baseline models suited to the detected target type."""
-    target_type = determine_target_type(target_feature, feature_sets)
+
+    target_type = determine_target_type(target_feature)
 
     model_ready = (
         pd.concat([features, target], axis=1)
@@ -38,7 +32,7 @@ def run_modeling_suite(
     X = model_ready.drop(columns=[target_feature])
     y = model_ready[target_feature]
 
-    results: Dict[str, object] = {
+    results: dict[str, object] = {
         "target_type": target_type,
         "regression_results": pd.DataFrame(),
         "classification_results": pd.DataFrame(),
