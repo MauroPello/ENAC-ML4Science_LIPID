@@ -10,7 +10,7 @@ from src.feature_config import (
 )
 
 from .binary import evaluate_binary_target
-from .continuous import compute_vif, evaluate_continuous_target
+from .continuous import evaluate_continuous_target
 
 PredictorRegistry = list[tuple[str, str]]
 
@@ -74,7 +74,6 @@ def compute_associations(
         association_records = evaluate_binary_target(
             df, target_feature, predictor_registry
         )
-        vif_records = compute_vif(df, predictor_registry)
     else:
         raise ValueError(f"Target feature type '{target_type}' is not supported.")
 

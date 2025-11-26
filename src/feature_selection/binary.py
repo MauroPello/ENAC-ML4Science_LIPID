@@ -42,15 +42,14 @@ def evaluate_binary_target(
         if working.empty or working["target"].nunique() != 2:
             continue
 
-        if predictor_type in {"continuous", "binary"}:
-            association_records.extend(
-                _run_logistic(column, predictor_type, working)
-            )
-
-        if predictor_type in {"categorical", "binary"}:
+        if predictor_type == "binary":
             association_records.extend(
                 run_chi_square(column, working, predictor_type)
             )
+
+        association_records.extend(
+            _run_logistic(column, predictor_type, working)
+        )
 
     return association_records
 
