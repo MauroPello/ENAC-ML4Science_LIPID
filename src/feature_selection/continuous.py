@@ -80,7 +80,7 @@ def evaluate_continuous_target(
                 }
             )
         elif predictor_type == "categorical":
-            groups = [group["target"].values for _, group in subset.groupby(column)]
+            groups = [group["target"].values for _, group in subset.groupby(column, observed=False)]
             groups = [values for values in groups if len(values) > 1]
             if len(groups) > 1:
                 f_statistic, p_value = stats.f_oneway(*groups)
