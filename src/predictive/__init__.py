@@ -54,20 +54,9 @@ def run_modeling_suite(
         results.update(classification_payload)
     elif target_type == "categorical":
         if y.nunique() == 2:
-            results["note"] = (
-                "Detected binary outcome from categorical target; proceeding with binary classification."
-            )
             classification_payload = run_classification_models(
                 X, y, test_size=test_size, random_state=random_state
             )
             results.update(classification_payload)
-        else:
-            results["note"] = (
-                "Target feature type 'categorical' is not covered by this modeling block."
-            )
-    else:
-        results["note"] = (
-            f"Target feature type '{target_type}' is not covered by this modeling block."
-        )
 
     return results
