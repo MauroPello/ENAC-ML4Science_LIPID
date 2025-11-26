@@ -73,7 +73,7 @@ def assign_age_quantile_bins(
     return df
 
 
-def build_feature_matrix(
+def drop_extra_features(
     df: pd.DataFrame,
     excluded_targets: Iterable[str] = (),
 ) -> pd.DataFrame:
@@ -89,10 +89,5 @@ def build_feature_matrix(
         ],
         errors="ignore",
     )
-
-    for col in ALL_CATEGORICAL_FEATURES:
-        if col in features.columns and col not in exclusions:
-            dummies = pd.get_dummies(features[col], prefix=col)
-            features = pd.concat([features.drop(columns=[col]), dummies], axis=1)
 
     return features

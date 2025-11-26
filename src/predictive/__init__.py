@@ -9,7 +9,6 @@ from .regression import run_regression_models
 
 def run_modeling_suite(
     features: pd.DataFrame,
-    target: pd.Series,
     target_feature: str,
     *,
     test_size: float = 0.2,
@@ -18,19 +17,8 @@ def run_modeling_suite(
     """Train baseline models suited to the detected target type."""
 
     target_type = determine_target_type(target_feature)
-
-    model_ready = (
-        pd.concat([features, target], axis=1)
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-    )
-    if model_ready.empty:
-        raise ValueError(
-            "No rows available after aligning features and target. Inspect missing data handling."
-        )
-
-    X = model_ready.drop(columns=[target_feature])
-    y = model_ready[target_feature]
+    X = features.drop(columns=[target_feature])
+    y = features[target_feature]
 
     results: dict[str, object] = {
         "target_type": target_type,

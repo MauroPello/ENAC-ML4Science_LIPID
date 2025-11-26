@@ -114,7 +114,7 @@ def _run_point_biserial(
     ]
 
 
-def _run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
     groups = []
     for _, group in working.dropna(subset=["predictor"]).groupby("predictor", observed=False):
         values = group["target"].dropna().values

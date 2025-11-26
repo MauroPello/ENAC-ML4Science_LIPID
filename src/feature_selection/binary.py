@@ -49,7 +49,7 @@ def evaluate_binary_target(
 
         if predictor_type in {"categorical", "binary"}:
             association_records.extend(
-                _run_chi_square(column, predictor_type, working)
+                run_chi_square(column, working, predictor_type)
             )
 
     return association_records
@@ -85,8 +85,8 @@ def _run_logistic(
     ]
 
 
-def _run_chi_square(
-    column: str, predictor_type: str, working: pd.DataFrame
+def run_chi_square(
+    column: str, working: pd.DataFrame, predictor_type: str=None
 ) -> List[Dict[str, float]]:
     contingency = pd.crosstab(working["predictor"], working["target"])
     if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:
