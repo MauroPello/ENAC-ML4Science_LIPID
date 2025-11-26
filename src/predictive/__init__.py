@@ -1,3 +1,5 @@
+from typing import Mapping
+
 import numpy as np
 import pandas as pd
 
@@ -13,10 +15,11 @@ def run_modeling_suite(
     *,
     test_size: float = 0.2,
     random_state: int = 42,
+    feature_types: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
     """Train baseline models suited to the detected target type."""
 
-    target_type = determine_target_type(target_feature)
+    target_type = determine_target_type(target_feature, feature_types)
     X = features.drop(columns=[target_feature])
     y = features[target_feature]
 
