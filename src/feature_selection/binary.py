@@ -18,64 +18,88 @@ def evaluate_binary_target(
     predictor_registry: PredictorRegistry,
 ) -> List[Dict[str, float]]:
     """Compute association metrics when the target variable is binary."""
+
     association_records: List[Dict[str, float]] = []
 
-    binary_target = df[target_feature].replace([np.inf, -np.inf], np.nan).dropna()
-    if binary_target.nunique() != 2:
+    target_series = df[target_feature].replace([np.inf, -np.inf], np.nan)
+    if target_series.nunique(dropna=True) != 2:
         return association_records
 
-    for column, predictor_type in predictor_registry:
-        subset = (
-            df[[column, target_feature]].replace([np.inf, -np.inf], np.nan).dropna()
-        )
-        if subset.empty:
-            continue
+    target_codes = pd.Series(
+        pd.Categorical(target_series).codes,
+        index=target_series.index,
+        name="target_code",
+    )
 
-        subset["target_code"] = pd.Categorical(subset[target_feature]).codes
-        y_values = subset["target_code"]
-        if y_values.nunique() != 2:
+    for column, predictor_type in predictor_registry:
+        working = pd.DataFrame({
+            "predictor": df[column],
+            "target": target_series,
+            "target_code": target_codes,
+        }).replace([np.inf, -np.inf], np.nan)
+        working = working[working["target_code"] >= 0]
+        working = working.dropna(subset=["target"])
+        if working.empty or working["target"].nunique() != 2:
             continue
 
         if predictor_type in {"continuous", "binary"}:
-            predictor_numeric = pd.to_numeric(subset[column], errors="coerce")
-            predictor_matrix = predictor_numeric.to_frame(name=column).dropna()
-            if predictor_matrix.empty:
-                continue
-            aligned_y = y_values.loc[predictor_matrix.index]
-            if predictor_matrix[column].nunique() < 2 or aligned_y.nunique() != 2:
-                continue
-            predictor_matrix = sm.add_constant(predictor_matrix, has_constant="add")
-            try:
-                logistic_model = sm.Logit(aligned_y, predictor_matrix).fit(disp=False)
-                odds_ratio = float(np.exp(logistic_model.params[column]))
-                association_records.append(
-                    {
-                        "predictor": column,
-                        "predictor_type": predictor_type,
-                        "test": "Univariate logistic regression",
-                        "statistic_name": "odds_ratio",
-                        "statistic_value": odds_ratio,
-                        "p_value": float(logistic_model.pvalues[column]),
-                    }
-                )
-            except Exception:
-                pass
+            association_records.extend(
+                _run_logistic(column, predictor_type, working)
+            )
 
         if predictor_type in {"categorical", "binary"}:
-            contingency_table = pd.crosstab(subset[column], subset[target_feature])
-            if contingency_table.shape[0] > 1 and contingency_table.shape[1] > 1:
-                chi2_statistic, p_value, _, _ = stats.chi2_contingency(
-                    contingency_table
-                )
-                association_records.append(
-                    {
-                        "predictor": column,
-                        "predictor_type": predictor_type,
-                        "test": "Chi-square",
-                        "statistic_name": "chi2",
-                        "statistic_value": float(chi2_statistic),
-                        "p_value": float(p_value),
-                    }
-                )
+            association_records.extend(
+                _run_chi_square(column, predictor_type, working)
+            )
 
     return association_records
+
+
+def _run_logistic(
+    column: str, predictor_type: str, working: pd.DataFrame
+) -> List[Dict[str, float]]:
+    numeric = pd.to_numeric(working["predictor"], errors="coerce").dropna()
+    if numeric.empty or numeric.nunique() < 2:
+        return []
+
+    aligned = working.loc[numeric.index]
+    if aligned["target_code"].nunique() != 2:
+        return []
+
+    design = sm.add_constant(numeric.to_frame(name=column), has_constant="add")
+    try:
+        model = sm.Logit(aligned["target_code"], design).fit(disp=False)
+    except Exception:
+        return []
+
+    odds_ratio = float(np.exp(model.params[column]))
+    return [
+        {
+            "predictor": column,
+            "predictor_type": predictor_type,
+            "test": "Univariate logistic regression",
+            "statistic_name": "odds_ratio",
+            "statistic_value": odds_ratio,
+            "p_value": float(model.pvalues[column]),
+        }
+    ]
+
+
+def _run_chi_square(
+    column: str, predictor_type: str, working: pd.DataFrame
+) -> List[Dict[str, float]]:
+    contingency = pd.crosstab(working["predictor"], working["target"])
+    if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:
+        return []
+
+    chi2_statistic, p_value, _, _ = stats.chi2_contingency(contingency)
+    return [
+        {
+            "predictor": column,
+            "predictor_type": predictor_type,
+            "test": "Chi-square",
+            "statistic_name": "chi2",
+            "statistic_value": float(chi2_statistic),
+            "p_value": float(p_value),
+        }
+    ]

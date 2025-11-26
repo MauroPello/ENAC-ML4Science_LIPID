@@ -43,20 +43,20 @@ def run_modeling_suite(
     }
 
     if target_type == "continuous":
-        regression_payload = run_regression_models(
-            X, y, test_size=test_size, random_state=random_state
-        )
-        results.update(regression_payload)
-    elif target_type == "binary":
-        classification_payload = run_classification_models(
-            X, y, test_size=test_size, random_state=random_state
-        )
-        results.update(classification_payload)
-    elif target_type == "categorical":
-        if y.nunique() == 2:
-            classification_payload = run_classification_models(
+        results.update(
+            run_regression_models(
                 X, y, test_size=test_size, random_state=random_state
             )
-            results.update(classification_payload)
+        )
+    elif target_type == "binary":
+        results.update(
+            run_classification_models(
+                X, y, test_size=test_size, random_state=random_state
+            )
+        )
+    else:
+        raise ValueError(
+            "Only continuous and binary targets are supported for prediction."
+        )
 
     return results

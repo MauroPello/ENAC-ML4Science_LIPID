@@ -8,7 +8,6 @@ from src.feature_config import (
 )
 
 from .binary import evaluate_binary_target
-from .categorical import evaluate_categorical_target
 from .continuous import compute_vif, evaluate_continuous_target
 
 PredictorRegistry = list[tuple[str, str]]
@@ -52,11 +51,6 @@ def compute_associations(
         )
     elif target_type == "binary":
         association_records = evaluate_binary_target(
-            df, target_feature, predictor_registry
-        )
-        vif_records = compute_vif(df, predictor_registry)
-    elif target_type == "categorical":
-        association_records = evaluate_categorical_target(
             df, target_feature, predictor_registry
         )
         vif_records = compute_vif(df, predictor_registry)

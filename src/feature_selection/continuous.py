@@ -18,168 +18,217 @@ def evaluate_continuous_target(
     target_feature: str,
     predictor_registry: PredictorRegistry,
 ) -> Tuple[List[Dict[str, float]], List[Dict[str, float]]]:
-    """Compute association metrics when the target variable is continuous."""
-    association_records: List[Dict[str, float]] = []
+    """Run simple univariate checks for a continuous target."""
 
-    numeric_target = pd.to_numeric(df[target_feature], errors="coerce")
+    association_records: List[Dict[str, float]] = []
+    numeric_target = (
+        pd.to_numeric(df[target_feature], errors="coerce")
+        .replace([np.inf, -np.inf], np.nan)
+    )
+
     for column, predictor_type in predictor_registry:
-        subset = df[[column]].copy()
-        subset["target"] = numeric_target
-        if predictor_type == "continuous":
-            subset[column] = pd.to_numeric(subset[column], errors="coerce")
-        subset = subset.replace([np.inf, -np.inf], np.nan).dropna(
-            subset=[column, "target"]
-        )
-        if subset.empty:
+        working = pd.DataFrame({
+            "predictor": df[column],
+            "target": numeric_target,
+        }).replace([np.inf, -np.inf], np.nan)
+        working = working.dropna(subset=["target"])
+        if working.empty:
             continue
 
-        x_values = subset[column]
-        y_values = subset["target"]
-
-        if (
-            predictor_type == "continuous"
-            and x_values.nunique() > 1
-            and y_values.nunique() > 1
-        ):
-            pearson_r, pearson_p = stats.pearsonr(x_values, y_values)
-            association_records.append(
-                {
-                    "predictor": column,
-                    "predictor_type": predictor_type,
-                    "test": "Pearson correlation",
-                    "statistic_name": "r",
-                    "statistic_value": float(pearson_r),
-                    "p_value": float(pearson_p),
-                }
+        if predictor_type == "continuous":
+            association_records.extend(
+                _run_continuous_correlations(column, working)
             )
-            spearman_r, spearman_p = stats.spearmanr(x_values, y_values)
-            association_records.append(
-                {
-                    "predictor": column,
-                    "predictor_type": predictor_type,
-                    "test": "Spearman correlation",
-                    "statistic_name": "rho",
-                    "statistic_value": float(spearman_r),
-                    "p_value": float(spearman_p),
-                }
+        elif predictor_type == "binary":
+            association_records.extend(
+                _run_point_biserial(column, working)
             )
-        elif (
-            predictor_type == "binary"
-            and x_values.nunique() == 2
-            and y_values.nunique() > 1
-        ):
-            pb_r, pb_p = stats.pointbiserialr(x_values, y_values)
-            association_records.append(
-                {
-                    "predictor": column,
-                    "predictor_type": predictor_type,
-                    "test": "Point-biserial correlation",
-                    "statistic_name": "r_pb",
-                    "statistic_value": float(pb_r),
-                    "p_value": float(pb_p),
-                }
-            )
-        elif predictor_type == "categorical":
-            groups = [group["target"].values for _, group in subset.groupby(column, observed=False)]
-            groups = [values for values in groups if len(values) > 1]
-            if len(groups) > 1:
-                f_statistic, p_value = stats.f_oneway(*groups)
-                association_records.append(
-                    {
-                        "predictor": column,
-                        "predictor_type": predictor_type,
-                        "test": "ANOVA",
-                        "statistic_name": "F",
-                        "statistic_value": float(f_statistic),
-                        "p_value": float(p_value),
-                    }
-                )
 
-        regression_matrix = subset[[column]]
-        if predictor_type == "categorical":
-            regression_matrix = pd.get_dummies(
-                regression_matrix[column], prefix=column, drop_first=True
-            )
-        else:
-            regression_matrix = regression_matrix.apply(pd.to_numeric, errors="coerce")
-
-        regression_matrix = regression_matrix.apply(pd.to_numeric, errors="coerce")
-        aligned = regression_matrix.notna().all(axis=1) & y_values.notna()
-        regression_matrix = regression_matrix.loc[aligned]
-        aligned_y = y_values.loc[aligned]
-
-        if (
-            regression_matrix.shape[1] > 0
-            and aligned_y.nunique() > 1
-            and not regression_matrix.empty
-        ):
-            regression_matrix = sm.add_constant(regression_matrix, has_constant="add")
-            regression_model = sm.OLS(
-                aligned_y.astype(float), regression_matrix.astype(float)
-            ).fit()
-            for parameter in regression_model.params.index:
-                if parameter == "const":
-                    continue
-                association_records.append(
-                    {
-                        "predictor": column,
-                        "predictor_type": predictor_type,
-                        "test": "Univariate linear regression",
-                        "statistic_name": f"coef[{parameter}]",
-                        "statistic_value": float(regression_model.params[parameter]),
-                        "p_value": float(regression_model.pvalues[parameter]),
-                    }
-                )
+        association_records.extend(
+            _run_linear_regression(column, predictor_type, working)
+        )
 
     vif_records = compute_vif(df, predictor_registry)
     return association_records, vif_records
+
+
+def _run_continuous_correlations(
+    column: str, working: pd.DataFrame
+) -> List[Dict[str, float]]:
+    cleaned = working.copy()
+    cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
+    cleaned = cleaned.dropna(subset=["predictor"])
+    if cleaned.empty or cleaned["predictor"].nunique() <= 1:
+        return []
+
+    correlations: List[Dict[str, float]] = []
+    pearson_r, pearson_p = stats.pearsonr(cleaned["predictor"], cleaned["target"])
+    correlations.append(
+        {
+            "predictor": column,
+            "predictor_type": "continuous",
+            "test": "Pearson correlation",
+            "statistic_name": "r",
+            "statistic_value": float(pearson_r),
+            "p_value": float(pearson_p),
+        }
+    )
+
+    spearman_r, spearman_p = stats.spearmanr(
+        cleaned["predictor"], cleaned["target"]
+    )
+    correlations.append(
+        {
+            "predictor": column,
+            "predictor_type": "continuous",
+            "test": "Spearman correlation",
+            "statistic_name": "rho",
+            "statistic_value": float(spearman_r),
+            "p_value": float(spearman_p),
+        }
+    )
+    return correlations
+
+
+def _run_point_biserial(
+    column: str, working: pd.DataFrame
+) -> List[Dict[str, float]]:
+    cleaned = working.copy()
+    cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
+    cleaned = cleaned.dropna(subset=["predictor"])
+    if cleaned.empty or cleaned["predictor"].nunique() != 2:
+        return []
+
+    statistic, p_value = stats.pointbiserialr(
+        cleaned["predictor"], cleaned["target"]
+    )
+    return [
+        {
+            "predictor": column,
+            "predictor_type": "binary",
+            "test": "Point-biserial correlation",
+            "statistic_name": "r_pb",
+            "statistic_value": float(statistic),
+            "p_value": float(p_value),
+        }
+    ]
+
+
+def _run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+    groups = []
+    for _, group in working.dropna(subset=["predictor"]).groupby("predictor", observed=False):
+        values = group["target"].dropna().values
+        if len(values) > 1:
+            groups.append(values)
+
+    if len(groups) <= 1:
+        return []
+
+    f_statistic, p_value = stats.f_oneway(*groups)
+    return [
+        {
+            "predictor": column,
+            "predictor_type": "categorical",
+            "test": "ANOVA",
+            "statistic_name": "F",
+            "statistic_value": float(f_statistic),
+            "p_value": float(p_value),
+        }
+    ]
+
+
+def _run_linear_regression(
+    column: str, predictor_type: str, working: pd.DataFrame
+) -> List[Dict[str, float]]:
+    regression_features = _build_regression_features(column, predictor_type, working)
+    if regression_features.empty:
+        return []
+
+    regression_data = pd.concat(
+        [regression_features, working["target"]], axis=1
+    ).dropna()
+    if regression_data.empty or regression_data["target"].nunique() <= 1:
+        return []
+
+    X = regression_data.drop(columns="target")
+    # Remove constant columns to avoid singular designs.
+    X = X.loc[:, X.apply(lambda series: series.nunique() > 1)]
+    if X.empty:
+        return []
+
+    X = sm.add_constant(X, has_constant="add")
+    model = sm.OLS(regression_data["target"].astype(float), X.astype(float)).fit()
+
+    records: List[Dict[str, float]] = []
+    for param, value in model.params.items():
+        if param == "const":
+            continue
+        records.append(
+            {
+                "predictor": column,
+                "predictor_type": predictor_type,
+                "test": "Univariate linear regression",
+                "statistic_name": f"coef[{param}]",
+                "statistic_value": float(value),
+                "p_value": float(model.pvalues[param]),
+            }
+        )
+    return records
+
+
+def _build_regression_features(
+    column: str, predictor_type: str, working: pd.DataFrame
+) -> pd.DataFrame:
+    if predictor_type == "categorical":
+        return pd.get_dummies(
+            working["predictor"], prefix=column, drop_first=True
+        ).replace([np.inf, -np.inf], np.nan)
+
+    numeric_series = pd.to_numeric(working["predictor"], errors="coerce")
+    return numeric_series.to_frame(name=column).replace([np.inf, -np.inf], np.nan)
 
 
 def compute_vif(
     df: pd.DataFrame, predictor_registry: PredictorRegistry
 ) -> List[Dict[str, float]]:
     """Calculate variance inflation factors for continuous predictors."""
-    continuous_predictors = [
-        column
-        for column, predictor_type in predictor_registry
-        if predictor_type == "continuous"
-    ]
-    if not continuous_predictors:
+
+    columns = [name for name, kind in predictor_registry if kind == "continuous"]
+    if not columns:
         return []
 
-    vif_records: List[Dict[str, float]] = []
-    continuous_frame = df[continuous_predictors].replace([np.inf, -np.inf], np.nan)
-    continuous_frame = continuous_frame.dropna()
-    if continuous_frame.shape[1] == 0 or continuous_frame.shape[0] <= 1:
+    frame = (
+        df[columns]
+        .apply(pd.to_numeric, errors="coerce")
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+    )
+    if frame.shape[0] <= 1:
         return []
 
-    non_constant_columns = [
-        column
-        for column in continuous_frame.columns
-        if continuous_frame[column].nunique() > 1
-    ]
-    continuous_frame = continuous_frame[non_constant_columns]
-    if continuous_frame.shape[1] <= 1:
+    frame = frame.loc[:, frame.apply(lambda series: series.nunique() > 1)]
+    if frame.shape[1] <= 1:
         return []
 
     try:
-        design_matrix = sm.add_constant(continuous_frame, has_constant="add")
+        design = sm.add_constant(frame, has_constant="add")
     except Exception:
         return []
 
-    for index, column in enumerate(continuous_frame.columns):
+    vif_records: List[Dict[str, float]] = []
+    for index, column in enumerate(frame.columns, start=1):
         try:
-            vif_value = variance_inflation_factor(design_matrix.values, index + 1)
-            vif_records.append(
-                {
-                    "predictor": column,
-                    "predictor_type": "continuous",
-                    "test": "VIF",
-                    "statistic_name": "VIF",
-                    "statistic_value": float(vif_value),
-                    "p_value": np.nan,
-                }
-            )
+            value = variance_inflation_factor(design.values, index)
         except Exception:
             continue
+        vif_records.append(
+            {
+                "predictor": column,
+                "predictor_type": "continuous",
+                "test": "VIF",
+                "statistic_name": "VIF",
+                "statistic_value": float(value),
+                "p_value": np.nan,
+            }
+        )
     return vif_records
