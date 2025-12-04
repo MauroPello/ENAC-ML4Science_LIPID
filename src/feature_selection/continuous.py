@@ -21,28 +21,25 @@ def evaluate_continuous_target(
     """Run simple univariate checks for a continuous target."""
 
     association_records: List[Dict[str, float]] = []
-    numeric_target = (
-        pd.to_numeric(df[target_feature], errors="coerce")
-        .replace([np.inf, -np.inf], np.nan)
+    numeric_target = pd.to_numeric(df[target_feature], errors="coerce").replace(
+        [np.inf, -np.inf], np.nan
     )
 
     for column, predictor_type in predictor_registry:
-        working = pd.DataFrame({
-            "predictor": df[column],
-            "target": numeric_target,
-        }).replace([np.inf, -np.inf], np.nan)
+        working = pd.DataFrame(
+            {
+                "predictor": df[column],
+                "target": numeric_target,
+            }
+        ).replace([np.inf, -np.inf], np.nan)
         working = working.dropna(subset=["target"])
         if working.empty:
             continue
 
         if predictor_type == "continuous":
-            association_records.extend(
-                _run_continuous_correlations(column, working)
-            )
+            association_records.extend(_run_continuous_correlations(column, working))
         elif predictor_type == "binary":
-            association_records.extend(
-                _run_point_biserial(column, working)
-            )
+            association_records.extend(_run_point_biserial(column, working))
 
         association_records.extend(
             _run_linear_regression(column, predictor_type, working)
@@ -74,9 +71,7 @@ def _run_continuous_correlations(
         }
     )
 
-    spearman_r, spearman_p = stats.spearmanr(
-        cleaned["predictor"], cleaned["target"]
-    )
+    spearman_r, spearman_p = stats.spearmanr(cleaned["predictor"], cleaned["target"])
     correlations.append(
         {
             "predictor": column,
@@ -90,18 +85,14 @@ def _run_continuous_correlations(
     return correlations
 
 
-def _run_point_biserial(
-    column: str, working: pd.DataFrame
-) -> List[Dict[str, float]]:
+def _run_point_biserial(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
     cleaned = working.copy()
     cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
     cleaned = cleaned.dropna(subset=["predictor"])
     if cleaned.empty or cleaned["predictor"].nunique() != 2:
         return []
 
-    statistic, p_value = stats.pointbiserialr(
-        cleaned["predictor"], cleaned["target"]
-    )
+    statistic, p_value = stats.pointbiserialr(cleaned["predictor"], cleaned["target"])
     return [
         {
             "predictor": column,
@@ -116,7 +107,9 @@ def _run_point_biserial(
 
 def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
     groups = []
-    for _, group in working.dropna(subset=["predictor"]).groupby("predictor", observed=False):
+    for _, group in working.dropna(subset=["predictor"]).groupby(
+        "predictor", observed=False
+    ):
         values = group["target"].dropna().values
         if len(values) > 1:
             groups.append(values)

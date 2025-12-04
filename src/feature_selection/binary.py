@@ -32,24 +32,22 @@ def evaluate_binary_target(
     )
 
     for column, predictor_type in predictor_registry:
-        working = pd.DataFrame({
-            "predictor": df[column],
-            "target": target_series,
-            "target_code": target_codes,
-        }).replace([np.inf, -np.inf], np.nan)
+        working = pd.DataFrame(
+            {
+                "predictor": df[column],
+                "target": target_series,
+                "target_code": target_codes,
+            }
+        ).replace([np.inf, -np.inf], np.nan)
         working = working[working["target_code"] >= 0]
         working = working.dropna(subset=["target"])
         if working.empty or working["target"].nunique() != 2:
             continue
 
         if predictor_type == "binary":
-            association_records.extend(
-                run_chi_square(column, working, predictor_type)
-            )
+            association_records.extend(run_chi_square(column, working, predictor_type))
 
-        association_records.extend(
-            _run_logistic(column, predictor_type, working)
-        )
+        association_records.extend(_run_logistic(column, predictor_type, working))
 
     return association_records
 
@@ -85,7 +83,7 @@ def _run_logistic(
 
 
 def run_chi_square(
-    column: str, working: pd.DataFrame, predictor_type: str=None
+    column: str, working: pd.DataFrame, predictor_type: str = None
 ) -> List[Dict[str, float]]:
     contingency = pd.crosstab(working["predictor"], working["target"])
     if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:

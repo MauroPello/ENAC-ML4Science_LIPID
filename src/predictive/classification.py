@@ -53,9 +53,7 @@ def run_classification_models(
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(
-                            penalty="l2", solver="lbfgs", max_iter=5000
-                        ),
+                        LogisticRegression(penalty="l2", solver="lbfgs", max_iter=5000),
                     ),
                 ]
             ),
@@ -67,9 +65,7 @@ def run_classification_models(
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(
-                            penalty="l1", solver="saga", max_iter=5000
-                        ),
+                        LogisticRegression(penalty="l1", solver="saga", max_iter=5000),
                     ),
                 ]
             ),
@@ -137,7 +133,8 @@ def run_classification_models(
         try:
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
-        except Exception:
+        except Exception as e:
+            print(f"Model {name} failed: {e}")
             continue
 
         metrics = _collect_classification_metrics(model, y_test, y_pred, X_test)
@@ -157,10 +154,15 @@ def run_classification_models(
         else pd.DataFrame()
     )
 
+    best_model_name = results_df.iloc[0]["model"] if not results_df.empty else None
+    best_model = next((m for n, m in models if n == best_model_name), None)
+
     return {
         "classification_results": results_df,
         "confusion_matrices": confusion_matrices,
         "class_labels": class_labels,
+        "best_model": best_model,
+        "best_model_name": best_model_name,
     }
 
 
@@ -171,15 +173,25 @@ def _collect_classification_metrics(
     X_test: pd.DataFrame,
 ) -> Dict[str, float]:
     accuracy = float(accuracy_score(y_test, y_pred))
-    precision = float(precision_score(y_test, y_pred, zero_division=0))
-    recall = float(recall_score(y_test, y_pred, zero_division=0))
-    f1 = float(f1_score(y_test, y_pred, zero_division=0))
+    precision = float(
+        precision_score(y_test, y_pred, average="weighted", zero_division=0)
+    )
+    recall = float(recall_score(y_test, y_pred, average="weighted", zero_division=0))
+    f1 = float(f1_score(y_test, y_pred, average="weighted", zero_division=0))
 
     roc_auc = math.nan
     if len(np.unique(y_test)) == 2:
         scores = _safe_prediction_scores(model, X_test)
         if scores is not None:
             roc_auc = float(roc_auc_score(y_test, scores))
+    else:
+        try:
+            scores = model.predict_proba(X_test)
+            roc_auc = float(
+                roc_auc_score(y_test, scores, multi_class="ovr", average="weighted")
+            )
+        except Exception:
+            pass
 
     return {
         "Accuracy": accuracy,

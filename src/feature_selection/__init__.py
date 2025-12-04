@@ -59,9 +59,7 @@ def compute_associations(
     """Run univariate association tests and multicollinearity diagnostics."""
 
     target_type = determine_target_type(target_feature, feature_types)
-    predictor_registry = _build_predictor_registry(
-        df, target_feature, feature_types
-    )
+    predictor_registry = _build_predictor_registry(df, target_feature, feature_types)
 
     association_records: list[dict[str, float]] = []
     vif_records: list[dict[str, float]] = []

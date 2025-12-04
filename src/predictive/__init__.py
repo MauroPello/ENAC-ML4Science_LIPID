@@ -35,9 +35,7 @@ def run_modeling_suite(
 
     if target_type == "continuous":
         results.update(
-            run_regression_models(
-                X, y, test_size=test_size, random_state=random_state
-            )
+            run_regression_models(X, y, test_size=test_size, random_state=random_state)
         )
     elif target_type == "binary":
         results.update(

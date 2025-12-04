@@ -52,12 +52,8 @@ def run_regression_models(
         except Exception:
             continue
 
-        regression_records.append(
-            _collect_regression_metrics(name, y_test, y_pred)
-        )
-        coefficient_records.extend(
-            _collect_coefficients(name, model, X_train)
-        )
+        regression_records.append(_collect_regression_metrics(name, y_test, y_pred))
+        coefficient_records.extend(_collect_coefficients(name, model, X_train))
         residual_payload[name] = {
             "pred": np.asarray(y_pred),
             "resid": np.asarray(y_test - y_pred),
@@ -70,10 +66,17 @@ def run_regression_models(
     )
     coefficients_df = pd.DataFrame(coefficient_records)
 
+    best_model_name = (
+        regression_df.iloc[0]["model"] if not regression_df.empty else None
+    )
+    best_model = next((m for n, m in models if n == best_model_name), None)
+
     return {
         "regression_results": regression_df,
         "coefficients": coefficients_df,
         "residuals": residual_payload,
+        "best_model": best_model,
+        "best_model_name": best_model_name,
     }
 
 
@@ -82,9 +85,7 @@ def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
         ("Linear Regression", Pipeline(steps=[("model", LinearRegression())])),
         (
             "Ridge Regression",
-            Pipeline(
-                steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]
-            ),
+            Pipeline(steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]),
         ),
         (
             "Lasso Regression",
