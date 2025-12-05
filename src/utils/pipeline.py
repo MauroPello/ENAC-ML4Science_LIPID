@@ -135,16 +135,15 @@ def drop_extra_features(
     """Prepare the feature matrix used for modeling."""
 
     allowed = set(
-        ALL_CATEGORICAL_FEATURES + ALL_BINARY_FEATURES + ALL_CONTINUOUS_FEATURES + POSSIBLE_TARGET_FEATURES
+        ALL_CATEGORICAL_FEATURES
+        + ALL_BINARY_FEATURES
+        + ALL_CONTINUOUS_FEATURES
+        + POSSIBLE_TARGET_FEATURES
     )
     exclusions = set(excluded_targets)
     allowed = allowed - exclusions
     features = df.drop(
-        columns=[
-            col
-            for col in df.columns
-            if col not in allowed
-        ],
+        columns=[col for col in df.columns if col not in allowed],
         errors="ignore",
     )
 

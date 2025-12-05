@@ -144,23 +144,37 @@ def aggregate_health_targets(df: pd.DataFrame, target_feature: str) -> pd.DataFr
     Returns:
         pd.DataFrame
             DataFrame with the aggregated target feature in the 'target' column.
+        target_type
+            Type of the target feature
     """
 
     if target_feature == "cardiovascular":
-        return process_cardiovascular_target(df, "target").drop(
-            columns=POSSIBLE_TARGET_FEATURES
-        )
+        return {
+            "data": process_cardiovascular_target(df, "target").drop(
+                columns=POSSIBLE_TARGET_FEATURES
+            ),
+            "target_type": "continuous",
+        }
     elif target_feature == "sleep_disorder":
-        return process_sleep_disorder_target(df, "target").drop(
-            columns=POSSIBLE_TARGET_FEATURES
-        )
+        return {
+            "data": process_sleep_disorder_target(df, "target").drop(
+                columns=POSSIBLE_TARGET_FEATURES
+            ),
+            "target_type": "continuous",
+        }
     elif target_feature == "mental_health":
-        return process_mental_health_target(df, "target").drop(
-            columns=POSSIBLE_TARGET_FEATURES
-        )
+        return {
+            "data": process_mental_health_target(df, "target").drop(
+                columns=POSSIBLE_TARGET_FEATURES
+            ),
+            "target_type": "continuous",
+        }
     elif target_feature == "respiratory":
-        return process_respiratory_target(df, "target").drop(
-            columns=POSSIBLE_TARGET_FEATURES
-        )
+        return {
+            "data": process_respiratory_target(df, "target").drop(
+                columns=POSSIBLE_TARGET_FEATURES
+            ),
+            "target_type": "continuous",
+        }
     else:
         raise ValueError(f"Unknown target feature: {target_feature}")
