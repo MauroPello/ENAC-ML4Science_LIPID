@@ -8,8 +8,8 @@ from src.feature_config import (
     ALL_CONTINUOUS_FEATURES,
 )
 
-from .binary import evaluate_binary_target
-from .continuous import evaluate_continuous_target
+from .binary import evaluate_binary_target, run_chi_square
+from .continuous import evaluate_continuous_target, run_anova
 
 PredictorRegistry = list[tuple[str, str]]
 
@@ -83,3 +83,49 @@ def compute_associations(
         vif_df = vif_df.sort_values(by="statistic_value", ascending=False)
 
     return association_df, vif_df
+
+def compute_categorical_associations(
+    df: pd.DataFrame,
+    target_feature: str,
+    feature_types: Mapping[str, str] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run tests diagnostics for categorical features."""
+
+    # identify categorical predictors excluding the current target
+    categorical_features = [
+        name
+        for name, type in feature_types.items()
+        if name != target_feature
+        and type == "categorical"
+    ]
+
+    if feature_types["target"] == "continuous":
+        anova_rows = []
+        for col in categorical_features:
+            working = pd.DataFrame({
+                "predictor": df[col],
+                "target": df[target_feature],
+            })
+            records = run_anova(col, working)
+            if records:
+                anova_rows.extend(records)
+        if anova_rows:
+            return pd.DataFrame(anova_rows).sort_values("p_value").reset_index(drop=True)
+        else:
+            print("No categorical features available for ANOVA against the continuous target.")
+    elif feature_types["target"] == "binary":
+        chi_rows = []
+        for col in categorical_features:
+            working = pd.DataFrame({
+                "predictor": df[col],
+                "target": df[target_feature],
+            })
+            records = run_chi_square(col, working)
+            if records:
+                chi_rows.extend(records)
+        if chi_rows:
+            return pd.DataFrame(chi_rows).sort_values("p_value").reset_index(drop=True)
+        else:
+            print("No categorical features available for chi-square tests against the binary target.")
+    else:
+        print(f"Association tests are only defined for continuous or binary targets (got '{feature_types["target"]}').")

@@ -1,6 +1,3 @@
-from typing import Mapping
-
-
 ALL_CONTINUOUS_FEATURES: list[str] = [
     "PC1",
     "PC2",
@@ -20,13 +17,14 @@ ALL_CONTINUOUS_FEATURES: list[str] = [
     "sleeping_hours",
     "bedtime_hour",
     "GHQ12_score",
+    # ordinal encoded features
+    "income",
+    "education_level",
+    "age_bin",
 ]
 
 ALL_CATEGORICAL_FEATURES: list[str] = [
     "typology",
-    "income",
-    "education_level",
-    "age_bin",
 ]
 
 ALL_BINARY_FEATURES: list[str] = [

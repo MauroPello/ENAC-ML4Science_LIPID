@@ -135,7 +135,7 @@ def drop_extra_features(
     """Prepare the feature matrix used for modeling."""
 
     allowed = set(
-        ALL_CATEGORICAL_FEATURES + ALL_BINARY_FEATURES + ALL_CONTINUOUS_FEATURES
+        ALL_CATEGORICAL_FEATURES + ALL_BINARY_FEATURES + ALL_CONTINUOUS_FEATURES + POSSIBLE_TARGET_FEATURES
     )
     exclusions = set(excluded_targets)
     allowed = allowed - exclusions
@@ -143,7 +143,7 @@ def drop_extra_features(
         columns=[
             col
             for col in df.columns
-            if col not in allowed and not col.startswith("typology")
+            if col not in allowed
         ],
         errors="ignore",
     )
@@ -151,7 +151,7 @@ def drop_extra_features(
     return features
 
 
-def ohe_features(df: pd.DataFrame) -> pd.DataFrame:
+def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
     """
     One-hot encode the 'typology' feature using sklearn (the only truly categorical feature left).
 
@@ -163,20 +163,28 @@ def ohe_features(df: pd.DataFrame) -> pd.DataFrame:
     if "typology" not in df.columns:
         print("Warning: 'typology' column not found for one-hot encoding.")
         return df
+
     encoder = OneHotEncoder(sparse_output=False, dtype=int, handle_unknown="ignore")
     encoded_array = encoder.fit_transform(df[["typology"]])
     feature_names = encoder.get_feature_names_out(["typology"])
+
     encoded_df = pd.DataFrame(encoded_array, columns=feature_names, index=df.index)
     df = pd.concat([df, encoded_df], axis=1)
     df = df.drop(columns=["typology"])
-    return df
+
+    feature_types = feature_types.copy()
+    feature_types.pop("typology")
+    for feature in feature_names:
+        feature_types[feature] = "binary"
+
+    return df, feature_types
 
 
-def run_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Run the full data processing pipeline
+    Run the full data preprocessing pipeline
     It is assumed that the input dataframe has already been loaded using load_combined_dataset.
-    The sequence of processing steps is:
+    The sequence of preprocessing steps is:
     1. Assign age quantile bins
     2. Encode ordinal features
     3. Process additional features
@@ -191,5 +199,5 @@ def run_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     processed_df = assign_age_quantile_bins(df)
     processed_df = encode_ordinal_features(processed_df)
     processed_df = process_additional_features(processed_df)
-    processed_df = ohe_features(processed_df)
+    processed_df = drop_extra_features(processed_df)
     return processed_df
