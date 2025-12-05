@@ -24,13 +24,13 @@ ALL_CONTINUOUS_FEATURES: list[str] = [
 
 ALL_CATEGORICAL_FEATURES: list[str] = [
     "typology",
-    "sex",
     "income",
     "education_level",
     "age_bin",
 ]
 
 ALL_BINARY_FEATURES: list[str] = [
+    "sex",
     "heart_failure",
     "heart_rhythm",
     "sleep_disorder_hot",
@@ -65,28 +65,3 @@ POSSIBLE_TARGET_FEATURES: list[str] = (
     + MENTAL_HEALTH_FEATURES
     + RESPIRATORY_FEATURES
 )
-
-
-def determine_target_type(
-    target_feature: str,
-    feature_types: Mapping[str, str] | None = None,
-) -> str:
-    """Infer whether the selected target is continuous, categorical, or binary."""
-
-    if feature_types is not None and target_feature in feature_types:
-        mapped_type = feature_types[target_feature]
-        if mapped_type not in {"continuous", "categorical", "binary"}:
-            raise ValueError(
-                f"Target feature '{target_feature}' has unsupported type '{mapped_type}'."
-            )
-        return mapped_type
-
-    if target_feature in ALL_CONTINUOUS_FEATURES:
-        return "continuous"
-    if target_feature in ALL_CATEGORICAL_FEATURES:
-        return "categorical"
-    if target_feature in ALL_BINARY_FEATURES:
-        return "binary"
-    if target_feature == "target":
-        return "continuous"
-    raise ValueError(f"Target feature '{target_feature}' is not recognized.")

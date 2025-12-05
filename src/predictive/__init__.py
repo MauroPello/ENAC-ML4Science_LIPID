@@ -3,8 +3,6 @@ from typing import Mapping
 import numpy as np
 import pandas as pd
 
-from src.feature_config import determine_target_type
-
 from .classification import run_classification_models
 from .regression import run_regression_models
 
@@ -19,7 +17,7 @@ def run_modeling_suite(
 ) -> dict[str, object]:
     """Train baseline models suited to the detected target type."""
 
-    target_type = determine_target_type(target_feature, feature_types)
+    target_type = feature_types["target"]
     X = features.drop(columns=[target_feature])
     y = features[target_feature]
 

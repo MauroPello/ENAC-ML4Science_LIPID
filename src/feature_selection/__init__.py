@@ -6,7 +6,6 @@ from src.feature_config import (
     ALL_CATEGORICAL_FEATURES,
     ALL_BINARY_FEATURES,
     ALL_CONTINUOUS_FEATURES,
-    determine_target_type,
 )
 
 from .binary import evaluate_binary_target
@@ -58,7 +57,7 @@ def compute_associations(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run univariate association tests and multicollinearity diagnostics."""
 
-    target_type = determine_target_type(target_feature, feature_types)
+    target_type = feature_types["target"]
     predictor_registry = _build_predictor_registry(df, target_feature, feature_types)
 
     association_records: list[dict[str, float]] = []
