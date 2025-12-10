@@ -40,9 +40,8 @@ def process_cardiovascular_target(df: pd.DataFrame, target_column: str) -> pd.Da
             DataFrame with the aggregated cardiovascular target feature in the specified target column.
     """
     result = df.copy()
-    result[target_column] = (
-        result[CARDIOVASCULAR_FEATURES].sum(axis=1) / len(CARDIOVASCULAR_FEATURES)
-    ).clip(0, 1)
+    # If any cardiovascular feature is 1, set target to 1, else 0
+    result[target_column] = result[CARDIOVASCULAR_FEATURES].max(axis=1)
     return result
 
 
@@ -124,9 +123,8 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
             DataFrame with the aggregated respiratory target feature in the specified target column.
     """
     result = df.copy()
-    result[target_column] = (
-        result[RESPIRATORY_FEATURES].sum(axis=1) / len(RESPIRATORY_FEATURES)
-    ).clip(0, 1)
+    # If any respiratory feature is 1, set target to 1, else 0
+    result[target_column] = result[RESPIRATORY_FEATURES].max(axis=1)
     return result
 
 

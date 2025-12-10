@@ -1,64 +1,89 @@
-"""Automatic feature selection utilities."""
+"""Threshold-based feature filtering utilities.
+
+Uses tolerant thresholds to filter only clearly irrelevant features,
+preserving more information for downstream models.
+"""
 
 import pandas as pd
 import numpy as np
-from sklearn.feature_selection import SelectKBest, f_classif, f_regression
 from typing import List, Tuple
 
+# Default tolerant thresholds
+DEFAULT_P_VALUE_THRESHOLD = 0.5
+DEFAULT_CORRELATION_THRESHOLD = 0.98
+DEFAULT_VIF_THRESHOLD = 50.0
 
-def select_best_features(
-    X: pd.DataFrame,
-    y: pd.Series,
-    task_type: str = "classification",
-    k: int = 10,
-) -> Tuple[pd.DataFrame, List[str]]:
+
+def filter_by_p_value(
+    association_df: pd.DataFrame,
+    threshold: float = DEFAULT_P_VALUE_THRESHOLD,
+) -> List[str]:
     """
-    Select the top k features based on univariate statistical tests.
+    Filter features based on p-value threshold.
+
+    Only removes features with p-value above threshold (clearly non-significant).
 
     Args:
-        X: Feature matrix.
-        y: Target vector.
-        task_type: 'classification' or 'regression'.
-        k: Number of features to select.
+        association_df: DataFrame with 'predictor' and 'p_value' columns
+            (output from compute_associations).
+        threshold: Maximum p-value to keep a feature (default: 0.5).
 
     Returns:
-        Transformed feature matrix and list of selected feature names.
+        List of feature names that pass the threshold.
     """
-    if k >= X.shape[1]:
-        return X, X.columns.tolist()
+    if association_df.empty or "p_value" not in association_df.columns:
+        return []
 
-    if task_type == "classification":
-        score_func = f_classif
-    elif task_type == "regression":
-        score_func = f_regression
-    else:
-        raise ValueError("task_type must be 'classification' or 'regression'")
-
-    selector = SelectKBest(score_func=score_func, k=k)
-    X_new = selector.fit_transform(X, y)
-
-    selected_mask = selector.get_support()
-    selected_features = X.columns[selected_mask].tolist()
-
-    return (
-        pd.DataFrame(X_new, columns=selected_features, index=X.index),
-        selected_features,
+    # Group by predictor and keep if ANY test passes the threshold
+    passed = (
+        association_df.groupby("predictor")["p_value"]
+        .min()
+        .loc[lambda x: x <= threshold]
     )
+    return passed.index.tolist()
 
 
-def drop_correlated_features(df: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
+def filter_by_correlation(
+    df: pd.DataFrame,
+    threshold: float = DEFAULT_CORRELATION_THRESHOLD,
+) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Drop features that are highly correlated with each other.
+    Filter features that are nearly identical (very high correlation).
+
+    Uses a tolerant threshold to only remove near-duplicate features.
 
     Args:
         df: Feature matrix.
-        threshold: Correlation threshold.
+        threshold: Correlation threshold (default: 0.98).
 
     Returns:
-        DataFrame with correlated features removed.
+        Tuple of (filtered DataFrame, list of dropped column names).
     """
     corr_matrix = df.corr().abs()
     upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
     to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
+    return df.drop(columns=to_drop), to_drop
 
-    return df.drop(columns=to_drop)
+
+def filter_by_vif(
+    vif_df: pd.DataFrame,
+    threshold: float = DEFAULT_VIF_THRESHOLD,
+) -> List[str]:
+    """
+    Filter features with extreme multicollinearity based on VIF.
+
+    Only removes features with very high VIF values.
+
+    Args:
+        vif_df: DataFrame with 'predictor' and 'statistic_value' columns
+            (VIF output from compute_associations).
+        threshold: Maximum VIF to keep a feature (default: 50.0).
+
+    Returns:
+        List of feature names that pass the threshold.
+    """
+    if vif_df.empty or "statistic_value" not in vif_df.columns:
+        return []
+
+    passed = vif_df[vif_df["statistic_value"] <= threshold]["predictor"]
+    return passed.tolist()
