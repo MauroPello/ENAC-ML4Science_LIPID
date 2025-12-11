@@ -14,11 +14,7 @@ def evaluate_binary_target(
     """Compute association metrics when the target variable is binary."""
 
     association_records: list[dict[str, float]] = []
-
-    target_series = df[target_feature].replace([np.inf, -np.inf], np.nan)
-    if target_series.nunique(dropna=True) != 2:
-        return association_records
-
+    target_series = df[target_feature]
     target_codes = pd.Series(
         pd.Categorical(target_series).codes,
         index=target_series.index,
@@ -37,7 +33,7 @@ def evaluate_binary_target(
                 "target": target_series,
                 "target_code": target_codes,
             }
-        ).replace([np.inf, -np.inf], np.nan)
+        )
         working = working[working["target_code"] >= 0]
         working = working.dropna(subset=["target"])
         if working.empty or working["target"].nunique() != 2:
@@ -54,6 +50,8 @@ def evaluate_binary_target(
 def _run_logistic(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> list[dict[str, float]]:
+    """Run univariate logistic regression for a single predictor."""
+
     numeric = pd.to_numeric(working["predictor"], errors="coerce").dropna()
     if numeric.empty or numeric.nunique() < 2:
         return []
@@ -84,6 +82,8 @@ def _run_logistic(
 def run_chi_square(
     column: str, working: pd.DataFrame, predictor_type: str
 ) -> list[dict[str, float]]:
+    """Compute chi-square association between binary predictor and target."""
+
     contingency = pd.crosstab(working["predictor"], working["target"])
     if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:
         return []

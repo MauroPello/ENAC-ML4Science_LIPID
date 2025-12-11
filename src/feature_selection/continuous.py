@@ -17,9 +17,7 @@ def evaluate_continuous_target(
     """Run simple univariate checks for a continuous target."""
 
     association_records: List[Dict[str, float]] = []
-    numeric_target = pd.to_numeric(df[target_feature], errors="coerce").replace(
-        [np.inf, -np.inf], np.nan
-    )
+    numeric_target = pd.to_numeric(df[target_feature], errors="coerce")
 
     for column in df.columns:
         if column == target_feature:
@@ -32,7 +30,7 @@ def evaluate_continuous_target(
                 "predictor": df[column],
                 "target": numeric_target,
             }
-        ).replace([np.inf, -np.inf], np.nan)
+        )
         working = working.dropna(subset=["target"])
         if working.empty:
             continue
@@ -53,6 +51,8 @@ def evaluate_continuous_target(
 def _run_continuous_correlations(
     column: str, working: pd.DataFrame
 ) -> List[Dict[str, float]]:
+    """Compute Pearson and Spearman correlations for continuous predictors."""
+
     cleaned = working.copy()
     cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
     cleaned = cleaned.dropna(subset=["predictor"])
@@ -87,6 +87,8 @@ def _run_continuous_correlations(
 
 
 def _run_point_biserial(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+    """Compute point-biserial correlation for binary predictors."""
+
     cleaned = working.copy()
     cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
     cleaned = cleaned.dropna(subset=["predictor"])
@@ -107,6 +109,8 @@ def _run_point_biserial(column: str, working: pd.DataFrame) -> List[Dict[str, fl
 
 
 def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+    """ANOVA for categorical predictors with continuous target."""
+
     groups = []
     for _, group in working.dropna(subset=["predictor"]).groupby(
         "predictor", observed=False
@@ -134,6 +138,8 @@ def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
 def _run_linear_regression(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> List[Dict[str, float]]:
+    """Run univariate OLS on the predictor representation."""
+
     regression_features = _build_regression_features(column, predictor_type, working)
     if regression_features.empty:
         return []
@@ -173,13 +179,13 @@ def _run_linear_regression(
 def _build_regression_features(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> pd.DataFrame:
+    """Prepare numeric or one-hot encoded predictor for regression."""
+
     if predictor_type == "categorical":
-        return pd.get_dummies(
-            working["predictor"], prefix=column, drop_first=True
-        ).replace([np.inf, -np.inf], np.nan)
+        return pd.get_dummies(working["predictor"], prefix=column, drop_first=True)
 
     numeric_series = pd.to_numeric(working["predictor"], errors="coerce")
-    return numeric_series.to_frame(name=column).replace([np.inf, -np.inf], np.nan)
+    return numeric_series.to_frame(name=column)
 
 
 def compute_vif(
@@ -187,14 +193,13 @@ def compute_vif(
 ) -> List[Dict[str, float]]:
     """Calculate variance inflation factors for continuous predictors."""
 
-    columns = [col for col in df.columns if feature_types[col] == "continuous"]
+    columns = [col for col in df.columns if feature_types.get(col) == "continuous"]
     if not columns:
         return []
 
     frame = (
         df[columns]
         .apply(pd.to_numeric, errors="coerce")
-        .replace([np.inf, -np.inf], np.nan)
         .dropna()
     )
     if frame.shape[0] <= 1:

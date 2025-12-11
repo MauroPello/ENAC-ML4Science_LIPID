@@ -162,7 +162,6 @@ def aggregate_health_targets(df: pd.DataFrame, target_feature: str, feature_type
         }
     elif target_feature == "mental_health":
         feature_types["target"] = "continuous"
-        print(feature_types)
 
         return {
             "data": process_mental_health_target(df, "target").drop(
