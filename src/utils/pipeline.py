@@ -180,7 +180,6 @@ def z_normalize_continuous(
     df: pd.DataFrame,
     feature_types: dict[str, str],
     *,
-    target_column: str = "target",
     skip_columns: Sequence[str] | None = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Z-normalize continuous predictors and report pre/post distribution stats.
@@ -192,7 +191,7 @@ def z_normalize_continuous(
     normalization statistics (mean, std, skewness) for the normalized columns.
     """
 
-    skip_set = set(skip_columns or []) | {target_column}
+    skip_set = set(skip_columns or [])
     continuous_cols = [
         name
         for name, kind in feature_types.items()
