@@ -176,47 +176,6 @@ def summarize_continuous_stats(
     return pd.DataFrame(rows)
 
 
-def z_normalize_continuous(
-    df: pd.DataFrame,
-    feature_types: dict[str, str],
-    *,
-    skip_columns: Sequence[str] | None = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Z-normalize continuous predictors and report pre/post distribution stats.
-
-    Only columns labelled as continuous in ``feature_types`` are normalized. Target
-    and any ``skip_columns`` are left untouched.
-
-    Returns the normalized dataframe, plus dataframes of pre- and post-
-    normalization statistics (mean, std, skewness) for the normalized columns.
-    """
-
-    skip_set = set(skip_columns or [])
-    continuous_cols = [
-        name
-        for name, kind in feature_types.items()
-        if kind == "continuous" and name not in skip_set
-    ]
-
-    before_stats = summarize_continuous_stats(df, continuous_cols)
-
-    normalized = df.copy()
-    for column in continuous_cols:
-        series = pd.to_numeric(normalized[column], errors="coerce")
-        mean = series.mean()
-        std = series.std(ddof=0)
-
-        if pd.isna(std) or std == 0:
-            # Skip columns with no variance to avoid division by zero.
-            continue
-
-        normalized[column] = (series - mean) / std
-
-    after_stats = summarize_continuous_stats(normalized, continuous_cols)
-
-    return normalized, before_stats, after_stats
-
-
 def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
     """
     One-hot encode the 'typology' feature using sklearn (the only truly categorical feature left).

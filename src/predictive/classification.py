@@ -18,7 +18,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
 
 from src.utils.prediction import collect_coefficients
@@ -54,6 +54,7 @@ def run_classification_models(
             "Logistic Regression (Ridge)",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     (
                         "model",
                         LogisticRegression(penalty="l2", solver="lbfgs", max_iter=5000),
@@ -65,6 +66,7 @@ def run_classification_models(
             "Logistic Regression (Lasso)",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     (
                         "model",
                         LogisticRegression(penalty="l1", solver="saga", max_iter=5000),
@@ -87,6 +89,7 @@ def run_classification_models(
             "SVM (Linear)",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     (
                         "model",
                         SVC(
@@ -100,6 +103,7 @@ def run_classification_models(
             "SVM (RBF)",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     (
                         "model",
                         SVC(kernel="rbf", probability=True, random_state=random_state),
@@ -111,6 +115,7 @@ def run_classification_models(
             "k-NN Classifier",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     ("model", KNeighborsClassifier()),
                 ]
             ),

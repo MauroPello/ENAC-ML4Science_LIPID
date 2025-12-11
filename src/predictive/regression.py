@@ -11,6 +11,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
 from src.utils.prediction import collect_coefficients
@@ -142,12 +143,13 @@ def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
         ("Linear Regression", Pipeline(steps=[("model", LinearRegression())])),
         (
             "Ridge Regression",
-            Pipeline(steps=[("model", Ridge(alpha=1.0))]),
+            Pipeline(steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]),
         ),
         (
             "Lasso Regression",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     ("model", Lasso(alpha=0.001, max_iter=10000)),
                 ]
             ),
@@ -156,6 +158,7 @@ def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
             "Kernel Ridge",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     ("model", KernelRidge(alpha=1.0, kernel="rbf")),
                 ]
             ),
@@ -177,6 +180,7 @@ def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
             "SVR (RBF)",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     ("model", SVR(kernel="rbf", C=1.0, epsilon=0.1)),
                 ]
             ),
@@ -185,6 +189,7 @@ def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
             "k-NN Regressor",
             Pipeline(
                 steps=[
+                    ("scaler", StandardScaler()),
                     ("model", KNeighborsRegressor(n_neighbors=5)),
                 ]
             ),
