@@ -5,8 +5,7 @@ preserving more information for downstream models.
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Tuple
+from typing import List
 
 # Default tolerant thresholds
 DEFAULT_P_VALUE_THRESHOLD = 0.5
@@ -41,28 +40,6 @@ def filter_by_p_value(
         .loc[lambda x: x <= threshold]
     )
     return passed.index.tolist()
-
-
-def filter_by_correlation(
-    df: pd.DataFrame,
-    threshold: float = DEFAULT_CORRELATION_THRESHOLD,
-) -> Tuple[pd.DataFrame, List[str]]:
-    """
-    Filter features that are nearly identical (very high correlation).
-
-    Uses a tolerant threshold to only remove near-duplicate features.
-
-    Args:
-        df: Feature matrix.
-        threshold: Correlation threshold (default: 0.98).
-
-    Returns:
-        Tuple of (filtered DataFrame, list of dropped column names).
-    """
-    corr_matrix = df.corr().abs()
-    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
-    to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
-    return df.drop(columns=to_drop), to_drop
 
 
 def filter_by_vif(

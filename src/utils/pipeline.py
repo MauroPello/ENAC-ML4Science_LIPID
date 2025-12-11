@@ -160,8 +160,7 @@ def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
     """
     df = df.copy()
     if "typology" not in df.columns:
-        print("Warning: 'typology' column not found for one-hot encoding.")
-        return df
+        return df, feature_types
 
     encoder = OneHotEncoder(sparse_output=False, dtype=int, handle_unknown="ignore")
     encoded_array = encoder.fit_transform(df[["typology"]])
