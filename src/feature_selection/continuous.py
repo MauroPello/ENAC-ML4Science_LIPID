@@ -1,22 +1,18 @@
 """Association tests and diagnostics for continuous targets or predictors."""
 
-from typing import Dict, List, Tuple
-
-import numpy as np
 import pandas as pd
 from scipy import stats
 import statsmodels.api as sm
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
 def evaluate_continuous_target(
     df: pd.DataFrame,
     target_feature: str,
     feature_types: dict[str, str],
-) -> Tuple[List[Dict[str, float]], List[Dict[str, float]]]:
+) -> list[dict[str, float]]:
     """Run simple univariate checks for a continuous target."""
 
-    association_records: List[Dict[str, float]] = []
+    association_records: list[dict[str, float]] = []
     numeric_target = pd.to_numeric(df[target_feature], errors="coerce")
 
     for column in df.columns:
@@ -44,13 +40,12 @@ def evaluate_continuous_target(
             _run_linear_regression(column, predictor_type, working)
         )
 
-    vif_records = compute_vif(df, feature_types)
-    return association_records, vif_records
+    return association_records
 
 
 def _run_continuous_correlations(
     column: str, working: pd.DataFrame
-) -> List[Dict[str, float]]:
+) -> list[dict[str, float]]:
     """Compute Pearson and Spearman correlations for continuous predictors."""
 
     cleaned = working.copy()
@@ -59,7 +54,7 @@ def _run_continuous_correlations(
     if cleaned.empty or cleaned["predictor"].nunique() <= 1:
         return []
 
-    correlations: List[Dict[str, float]] = []
+    correlations: list[dict[str, float]] = []
     pearson_r, pearson_p = stats.pearsonr(cleaned["predictor"], cleaned["target"])
     correlations.append(
         {
@@ -86,7 +81,7 @@ def _run_continuous_correlations(
     return correlations
 
 
-def _run_point_biserial(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+def _run_point_biserial(column: str, working: pd.DataFrame) -> list[dict[str, float]]:
     """Compute point-biserial correlation for binary predictors."""
 
     cleaned = working.copy()
@@ -108,7 +103,7 @@ def _run_point_biserial(column: str, working: pd.DataFrame) -> List[Dict[str, fl
     ]
 
 
-def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
+def run_anova(column: str, working: pd.DataFrame) -> list[dict[str, float]]:
     """ANOVA for categorical predictors with continuous target."""
 
     groups = []
@@ -137,7 +132,7 @@ def run_anova(column: str, working: pd.DataFrame) -> List[Dict[str, float]]:
 
 def _run_linear_regression(
     column: str, predictor_type: str, working: pd.DataFrame
-) -> List[Dict[str, float]]:
+) -> list[dict[str, float]]:
     """Run univariate OLS on the predictor representation."""
 
     regression_features = _build_regression_features(column, predictor_type, working)
@@ -159,7 +154,7 @@ def _run_linear_regression(
     X = sm.add_constant(X, has_constant="add")
     model = sm.OLS(regression_data["target"].astype(float), X.astype(float)).fit()
 
-    records: List[Dict[str, float]] = []
+    records: list[dict[str, float]] = []
     for param, value in model.params.items():
         if param == "const":
             continue
@@ -186,45 +181,3 @@ def _build_regression_features(
 
     numeric_series = pd.to_numeric(working["predictor"], errors="coerce")
     return numeric_series.to_frame(name=column)
-
-
-def compute_vif(
-    df: pd.DataFrame,
-    feature_types: dict[str, str],
-) -> List[Dict[str, float]]:
-    """Calculate variance inflation factors for continuous predictors."""
-
-    columns = [col for col in df.columns if feature_types.get(col) == "continuous"]
-    if not columns:
-        return []
-
-    frame = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
-    if frame.shape[0] <= 1:
-        return []
-
-    frame = frame.loc[:, frame.apply(lambda series: series.nunique() > 1)]
-    if frame.shape[1] <= 1:
-        return []
-
-    try:
-        design = sm.add_constant(frame, has_constant="add")
-    except Exception:
-        return []
-
-    vif_records: List[Dict[str, float]] = []
-    for index, column in enumerate(frame.columns, start=1):
-        try:
-            value = variance_inflation_factor(design.values, index)
-        except Exception:
-            continue
-        vif_records.append(
-            {
-                "predictor": column,
-                "predictor_type": "continuous",
-                "test": "VIF",
-                "statistic_name": "VIF",
-                "statistic_value": float(value),
-                "p_value": np.nan,
-            }
-        )
-    return vif_records

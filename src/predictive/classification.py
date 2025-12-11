@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
@@ -21,6 +20,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
+
+from src.utils.prediction import collect_coefficients
 
 
 def run_classification_models(
@@ -179,7 +180,7 @@ def run_classification_models(
         classification_records.append(metrics)
 
         coefficient_records.extend(
-            _collect_coefficients(name, best, X_train, y_train, random_state)
+            collect_coefficients(name, best, X_train, y_train, random_state)
         )
 
         cm = confusion_matrix(y_test, y_pred)
@@ -262,43 +263,6 @@ def _safe_prediction_scores(model: Pipeline, X_test: pd.DataFrame) -> np.ndarray
         return model.decision_function(X_test)
     except Exception:
         return None
-
-
-def _collect_coefficients(
-    name: str,
-    model: Pipeline,
-    X_train: pd.DataFrame,
-    y_train: np.ndarray,
-    random_state: int,
-) -> List[Dict[str, float]]:
-    final_estimator = model.named_steps.get("model", model)
-
-    if hasattr(final_estimator, "coef_"):
-        coefs = np.asarray(final_estimator.coef_)
-        if coefs.ndim > 1:
-            coefs = np.mean(np.abs(coefs), axis=0)
-        values = coefs
-    elif hasattr(final_estimator, "feature_importances_"):
-        values = np.asarray(final_estimator.feature_importances_)
-    else:
-        perm = permutation_importance(
-            model,
-            X_train,
-            y_train,
-            n_repeats=5,
-            random_state=random_state,
-            n_jobs=-1,
-        )
-        values = np.asarray(perm.importances_mean)
-
-    return [
-        {
-            "model": name,
-            "feature": feature_name,
-            "coefficient": float(coef_value),
-        }
-        for feature_name, coef_value in zip(X_train.columns, values)
-    ]
 
 
 def _get_refined_classification_grid(

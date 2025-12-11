@@ -1,4 +1,7 @@
+import numpy as np
 import pandas as pd
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels.api as sm
 
 from .binary import evaluate_binary_target, run_chi_square
 from .continuous import evaluate_continuous_target, run_anova
@@ -17,7 +20,7 @@ def compute_associations(
     vif_records: list[dict[str, float]] = []
 
     if target_type == "continuous":
-        association_records, vif_records = evaluate_continuous_target(
+        association_records = evaluate_continuous_target(
             df, target_feature, feature_types
         )
     elif target_type == "binary":
@@ -29,11 +32,54 @@ def compute_associations(
     if not association_df.empty:
         association_df = association_df.sort_values(by="p_value", na_position="last")
 
+    vif_records = compute_vif(df, feature_types)
     vif_df = pd.DataFrame(vif_records)
     if not vif_df.empty:
         vif_df = vif_df.sort_values(by="statistic_value", ascending=False)
 
     return association_df, vif_df
+
+
+def compute_vif(
+    df: pd.DataFrame,
+    feature_types: dict[str, str],
+) -> list[dict[str, float]]:
+    """Calculate variance inflation factors for continuous predictors."""
+
+    columns = [col for col in df.columns if feature_types.get(col) == "continuous"]
+    if not columns:
+        return []
+
+    frame = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
+    if frame.shape[0] <= 1:
+        return []
+
+    frame = frame.loc[:, frame.apply(lambda series: series.nunique() > 1)]
+    if frame.shape[1] <= 1:
+        return []
+
+    try:
+        design = sm.add_constant(frame, has_constant="add")
+    except Exception:
+        return []
+
+    vif_records: list[dict[str, float]] = []
+    for index, column in enumerate(frame.columns, start=1):
+        try:
+            value = variance_inflation_factor(design.values, index)
+        except Exception:
+            continue
+        vif_records.append(
+            {
+                "predictor": column,
+                "predictor_type": "continuous",
+                "test": "VIF",
+                "statistic_name": "VIF",
+                "statistic_value": float(value),
+                "p_value": np.nan,
+            }
+        )
+    return vif_records
 
 
 def compute_categorical_associations(
