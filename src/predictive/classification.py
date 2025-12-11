@@ -171,7 +171,7 @@ def run_classification_models(
         metrics = _collect_classification_metrics(best, y_test, y_pred, X_test)
         metrics["model"] = name
         metrics["best_params"] = gs.best_params_
-        best_params_map[name] = gs.best_params_
+        
         classification_records.append(metrics)
 
         cm = confusion_matrix(y_test, y_pred)
@@ -179,6 +179,7 @@ def run_classification_models(
         column_labels = [f"Pred_{label}" for label in class_labels]
         confusion_matrices[name] = pd.DataFrame(cm, index=index_labels, columns=column_labels)
         best_estimators[name] = best
+        best_params_map[name] = gs.best_params_
 
     results_df = (
         pd.DataFrame(classification_records).sort_values(by="F1", ascending=False)
