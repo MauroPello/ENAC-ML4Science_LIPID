@@ -9,10 +9,6 @@ These targets are:
 Each target is specifically crafted based on a combination of existing features in the dataset.
 """
 
-from __future__ import annotations
-
-from typing import Literal
-
 import pandas as pd
 import numpy as np
 
@@ -20,7 +16,6 @@ from src.feature_config import (
     CARDIOVASCULAR_FEATURES,
     MENTAL_HEALTH_FEATURES,
     RESPIRATORY_FEATURES,
-    SLEEP_DISORDER_FEATURES,
     POSSIBLE_TARGET_FEATURES,
 )
 
@@ -151,7 +146,7 @@ def aggregate_health_targets(df: pd.DataFrame, target_feature: str) -> pd.DataFr
             "data": process_cardiovascular_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "continuous",
+            "target_type": "binary",
         }
     elif target_feature == "sleep_disorder":
         return {
@@ -172,7 +167,7 @@ def aggregate_health_targets(df: pd.DataFrame, target_feature: str) -> pd.DataFr
             "data": process_respiratory_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "continuous",
+            "target_type": "binary",
         }
     else:
         raise ValueError(f"Unknown target feature: {target_feature}")
