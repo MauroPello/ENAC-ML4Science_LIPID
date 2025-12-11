@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import Lasso, LinearRegression, Ridge
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.neighbors import KNeighborsRegressor
@@ -97,7 +98,9 @@ def run_regression_models(
         regression_records.append(metrics)
 
         # collect coefficients if available
-        coefficient_records.extend(_collect_coefficients(name, best, X_train))
+        coefficient_records.extend(
+            _collect_coefficients(name, best, X_train, y_train, random_state)
+        )
 
         residual_payload[name] = {
             "pred": np.asarray(y_pred),
@@ -202,14 +205,27 @@ def _collect_coefficients(
     name: str,
     model: Pipeline,
     X_train: pd.DataFrame,
+    y_train: pd.Series,
+    random_state: int,
 ) -> List[Dict[str, float]]:
     final_estimator = model.named_steps.get("model", model)
-    if not hasattr(final_estimator, "coef_"):
-        return []
-
-    coefs = final_estimator.coef_
-    if isinstance(coefs, np.ndarray) and coefs.ndim > 1:
-        coefs = coefs.ravel()
+    if hasattr(final_estimator, "coef_"):
+        coefs = final_estimator.coef_
+        if isinstance(coefs, np.ndarray) and coefs.ndim > 1:
+            coefs = coefs.ravel()
+        values = np.asarray(coefs)
+    elif hasattr(final_estimator, "feature_importances_"):
+        values = np.asarray(final_estimator.feature_importances_)
+    else:
+        perm = permutation_importance(
+            model,
+            X_train,
+            y_train,
+            n_repeats=5,
+            random_state=random_state,
+            n_jobs=-1,
+        )
+        values = np.asarray(perm.importances_mean)
 
     return [
         {
@@ -217,7 +233,7 @@ def _collect_coefficients(
             "feature": feature_name,
             "coefficient": float(coef_value),
         }
-        for feature_name, coef_value in zip(X_train.columns, np.asarray(coefs))
+        for feature_name, coef_value in zip(X_train.columns, values)
     ]
 
 def _get_refined_regression_grid(
