@@ -15,7 +15,7 @@ ALL_CONTINUOUS_FEATURES: list[str] = [
     "noisenight",
     "points_sleep_deprivation",
     "sleeping_hours",
-    "bedtime_hour",
+    # "bedtime_hour", removed for now
     "GHQ12_score",
     # ordinal encoded features
     "income",
