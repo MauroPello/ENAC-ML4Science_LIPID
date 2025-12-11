@@ -71,17 +71,9 @@ def process_additional_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     if "bedtime_hour" in df.columns:
+        temp_dt = pd.to_datetime(df["bedtime_hour"], format="%H:%M", errors="coerce")
+        df["bedtime_hour"] = temp_dt.dt.hour + (temp_dt.dt.minute / 60.0)
 
-        def time_to_float(t_str):
-            try:
-                h, m = map(int, str(t_str).split(":"))
-                return (h * 60.0) + m / 60.0
-            except (ValueError, AttributeError):
-                return None
-
-        df["bedtime_hour"] = df["bedtime_hour"].apply(time_to_float)
-
-    # Encode Sex
     if "sex" in df.columns:
         df["sex"] = df["sex"].map({"Male": 0, "Female": 1})
 
