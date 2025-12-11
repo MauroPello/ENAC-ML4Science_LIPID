@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
@@ -133,6 +134,7 @@ def run_classification_models(
 
     classification_records: List[Dict[str, float]] = []
     confusion_matrices: Dict[str, pd.DataFrame] = {}
+    coefficient_records: List[Dict[str, float]] = []
     best_estimators: Dict[str, Pipeline] = {}
     best_params_map: Dict[str, dict] = {}
 
@@ -163,7 +165,7 @@ def run_classification_models(
             gs.fit(X_train, y_train)
             best = gs.best_estimator_
             y_pred = best.predict(X_test)
-            
+
         except Exception as e:
             print(f"Model {name} failed during GridSearchCV: {e}")
             continue
@@ -173,6 +175,10 @@ def run_classification_models(
         metrics["best_params"] = gs.best_params_
         
         classification_records.append(metrics)
+
+        coefficient_records.extend(
+            _collect_coefficients(name, best, X_train, y_train, random_state)
+        )
 
         cm = confusion_matrix(y_test, y_pred)
         index_labels = [f"Actual_{label}" for label in class_labels]
@@ -186,6 +192,7 @@ def run_classification_models(
         if classification_records
         else pd.DataFrame()
     )
+    coefficients_df = pd.DataFrame(coefficient_records)
 
     best_model_name = results_df.iloc[0]["model"] if not results_df.empty else None
     best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
@@ -195,6 +202,7 @@ def run_classification_models(
         "classification_results": results_df,
         "confusion_matrices": confusion_matrices,
         "class_labels": class_labels,
+        "coefficients": coefficients_df,
         "best_model": best_model,
         "best_model_name": best_model_name,
         "best_params": best_params,
@@ -247,6 +255,43 @@ def _safe_prediction_scores(model: Pipeline, X_test: pd.DataFrame) -> np.ndarray
         return model.decision_function(X_test)
     except Exception:
         return None
+
+
+def _collect_coefficients(
+    name: str,
+    model: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: np.ndarray,
+    random_state: int,
+) -> List[Dict[str, float]]:
+    final_estimator = model.named_steps.get("model", model)
+
+    if hasattr(final_estimator, "coef_"):
+        coefs = np.asarray(final_estimator.coef_)
+        if coefs.ndim > 1:
+            coefs = np.mean(np.abs(coefs), axis=0)
+        values = coefs
+    elif hasattr(final_estimator, "feature_importances_"):
+        values = np.asarray(final_estimator.feature_importances_)
+    else:
+        perm = permutation_importance(
+            model,
+            X_train,
+            y_train,
+            n_repeats=5,
+            random_state=random_state,
+            n_jobs=-1,
+        )
+        values = np.asarray(perm.importances_mean)
+
+    return [
+        {
+            "model": name,
+            "feature": feature_name,
+            "coefficient": float(coef_value),
+        }
+        for feature_name, coef_value in zip(X_train.columns, values)
+    ]
 
 
 def _get_refined_classification_grid(
