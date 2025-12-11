@@ -21,9 +21,7 @@ def compute_associations(
             df, target_feature, feature_types
         )
     elif target_type == "binary":
-        association_records = evaluate_binary_target(
-            df, target_feature, feature_types
-        )
+        association_records = evaluate_binary_target(df, target_feature, feature_types)
     else:
         raise ValueError(f"Target feature type '{target_type}' is not supported.")
 

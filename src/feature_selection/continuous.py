@@ -189,7 +189,8 @@ def _build_regression_features(
 
 
 def compute_vif(
-    df: pd.DataFrame, feature_types: dict[str, str],
+    df: pd.DataFrame,
+    feature_types: dict[str, str],
 ) -> List[Dict[str, float]]:
     """Calculate variance inflation factors for continuous predictors."""
 
@@ -197,11 +198,7 @@ def compute_vif(
     if not columns:
         return []
 
-    frame = (
-        df[columns]
-        .apply(pd.to_numeric, errors="coerce")
-        .dropna()
-    )
+    frame = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
     if frame.shape[0] <= 1:
         return []
 

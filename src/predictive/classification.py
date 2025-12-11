@@ -91,7 +91,9 @@ def run_classification_models(
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        SVC(kernel="linear", probability=True, random_state=random_state),
+                        SVC(
+                            kernel="linear", probability=True, random_state=random_state
+                        ),
                     ),
                 ]
             ),
@@ -183,7 +185,9 @@ def run_classification_models(
         cm = confusion_matrix(y_test, y_pred)
         index_labels = [f"Actual_{label}" for label in class_labels]
         column_labels = [f"Pred_{label}" for label in class_labels]
-        confusion_matrices[name] = pd.DataFrame(cm, index=index_labels, columns=column_labels)
+        confusion_matrices[name] = pd.DataFrame(
+            cm, index=index_labels, columns=column_labels
+        )
         best_estimators[name] = best
 
     results_df = (
@@ -194,8 +198,12 @@ def run_classification_models(
     coefficients_df = pd.DataFrame(coefficient_records)
 
     best_model_name = results_df.iloc[0]["model"] if not results_df.empty else None
-    best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
-    best_params = best_params_map.get(best_model_name) if best_model_name is not None else None
+    best_model = (
+        best_estimators.get(best_model_name) if best_model_name is not None else None
+    )
+    best_params = (
+        best_params_map.get(best_model_name) if best_model_name is not None else None
+    )
 
     return {
         "classification_results": results_df,

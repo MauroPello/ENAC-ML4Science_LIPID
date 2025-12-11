@@ -72,7 +72,8 @@ def process_sleep_disorder_target(
 
     behavioral_risk = (
         # (duration_risk * 0.4) + (circadian_risk * 0.3) + (deprivation_risk * 0.3)
-        (duration_risk * 0.4) + (deprivation_risk * 0.3)
+        (duration_risk * 0.4)
+        + (deprivation_risk * 0.3)
     )
 
     DISORDER_FLOOR = 0.8
@@ -124,7 +125,9 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
     return result
 
 
-def aggregate_health_targets(df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]) -> pd.DataFrame:
+def aggregate_health_targets(
+    df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]
+) -> pd.DataFrame:
     """
     Aggregate relevant health features into a single target feature.
 

@@ -117,9 +117,15 @@ def run_regression_models(
     )
     coefficients_df = pd.DataFrame(coefficient_records)
 
-    best_model_name = regression_df.iloc[0]["model"] if not regression_df.empty else None
-    best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
-    best_params = best_params_map.get(best_model_name) if best_model_name is not None else None
+    best_model_name = (
+        regression_df.iloc[0]["model"] if not regression_df.empty else None
+    )
+    best_model = (
+        best_estimators.get(best_model_name) if best_model_name is not None else None
+    )
+    best_params = (
+        best_params_map.get(best_model_name) if best_model_name is not None else None
+    )
 
     return {
         "regression_results": regression_df,
@@ -235,6 +241,7 @@ def _collect_coefficients(
         }
         for feature_name, coef_value in zip(X_train.columns, values)
     ]
+
 
 def _get_refined_regression_grid(
     best_params: dict,
