@@ -1,8 +1,6 @@
 """Association tests and diagnostics for continuous targets or predictors."""
 
-from __future__ import annotations
-
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -10,13 +8,11 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-PredictorRegistry = Sequence[Tuple[str, str]]
-
 
 def evaluate_continuous_target(
     df: pd.DataFrame,
     target_feature: str,
-    predictor_registry: PredictorRegistry,
+    feature_types: dict[str, str],
 ) -> Tuple[List[Dict[str, float]], List[Dict[str, float]]]:
     """Run simple univariate checks for a continuous target."""
 
@@ -25,7 +21,12 @@ def evaluate_continuous_target(
         [np.inf, -np.inf], np.nan
     )
 
-    for column, predictor_type in predictor_registry:
+    for column in df.columns:
+        if column == target_feature:
+            continue
+
+        predictor_type = feature_types[column]
+
         working = pd.DataFrame(
             {
                 "predictor": df[column],
@@ -45,7 +46,7 @@ def evaluate_continuous_target(
             _run_linear_regression(column, predictor_type, working)
         )
 
-    vif_records = compute_vif(df, predictor_registry)
+    vif_records = compute_vif(df, feature_types)
     return association_records, vif_records
 
 
@@ -182,11 +183,11 @@ def _build_regression_features(
 
 
 def compute_vif(
-    df: pd.DataFrame, predictor_registry: PredictorRegistry
+    df: pd.DataFrame, feature_types: dict[str, str],
 ) -> List[Dict[str, float]]:
     """Calculate variance inflation factors for continuous predictors."""
 
-    columns = [name for name, kind in predictor_registry if kind == "continuous"]
+    columns = [col for col in df.columns if feature_types[col] == "continuous"]
     if not columns:
         return []
 

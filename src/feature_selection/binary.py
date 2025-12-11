@@ -1,25 +1,19 @@
 """Association tests for binary targets."""
 
-from __future__ import annotations
-
-from typing import Dict, List, Sequence, Tuple
-
 import numpy as np
 import pandas as pd
 from scipy import stats
 import statsmodels.api as sm
 
-PredictorRegistry = Sequence[Tuple[str, str]]
-
 
 def evaluate_binary_target(
     df: pd.DataFrame,
     target_feature: str,
-    predictor_registry: PredictorRegistry,
-) -> List[Dict[str, float]]:
+    feature_types: dict[str, str],
+) -> list[dict[str, float]]:
     """Compute association metrics when the target variable is binary."""
 
-    association_records: List[Dict[str, float]] = []
+    association_records: list[dict[str, float]] = []
 
     target_series = df[target_feature].replace([np.inf, -np.inf], np.nan)
     if target_series.nunique(dropna=True) != 2:
@@ -31,7 +25,12 @@ def evaluate_binary_target(
         name="target_code",
     )
 
-    for column, predictor_type in predictor_registry:
+    for column in df.columns:
+        if column == target_feature:
+            continue
+
+        predictor_type = feature_types[column]
+
         working = pd.DataFrame(
             {
                 "predictor": df[column],
@@ -54,7 +53,7 @@ def evaluate_binary_target(
 
 def _run_logistic(
     column: str, predictor_type: str, working: pd.DataFrame
-) -> List[Dict[str, float]]:
+) -> list[dict[str, float]]:
     numeric = pd.to_numeric(working["predictor"], errors="coerce").dropna()
     if numeric.empty or numeric.nunique() < 2:
         return []
@@ -83,8 +82,8 @@ def _run_logistic(
 
 
 def run_chi_square(
-    column: str, working: pd.DataFrame, predictor_type: str = None
-) -> List[Dict[str, float]]:
+    column: str, working: pd.DataFrame, predictor_type: str
+) -> list[dict[str, float]]:
     contingency = pd.crosstab(working["predictor"], working["target"])
     if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:
         return []

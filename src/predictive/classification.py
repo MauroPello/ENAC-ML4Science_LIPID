@@ -1,7 +1,5 @@
 """Classification modeling helpers for binary targets."""
 
-from __future__ import annotations
-
 import math
 from typing import Dict, List
 
@@ -17,7 +15,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -30,8 +28,12 @@ def run_classification_models(
     *,
     test_size: float = 0.2,
     random_state: int = 42,
+    cv: int = 5,
 ) -> Dict[str, object]:
-    """Train baseline classifiers for binary outcomes."""
+    """Train baseline classifiers with k-fold CV grid search and return evaluation artefacts.
+
+    Uses `StratifiedKFold` and `GridSearchCV` with standard parameter grids.
+    """
 
     label_encoder = LabelEncoder()
     y_encoded = label_encoder.fit_transform(y)
@@ -76,9 +78,7 @@ def run_classification_models(
                 steps=[
                     (
                         "model",
-                        RandomForestClassifier(
-                            n_estimators=300, random_state=random_state
-                        ),
+                        RandomForestClassifier(random_state=random_state),
                     )
                 ]
             ),
@@ -90,11 +90,7 @@ def run_classification_models(
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        SVC(
-                            kernel="linear",
-                            probability=True,
-                            random_state=random_state,
-                        ),
+                        SVC(kernel="linear", probability=True, random_state=random_state),
                     ),
                 ]
             ),
@@ -106,11 +102,7 @@ def run_classification_models(
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        SVC(
-                            kernel="rbf",
-                            probability=True,
-                            random_state=random_state,
-                        ),
+                        SVC(kernel="rbf", probability=True, random_state=random_state),
                     ),
                 ]
             ),
@@ -120,33 +112,61 @@ def run_classification_models(
             Pipeline(
                 steps=[
                     ("scaler", StandardScaler()),
-                    ("model", KNeighborsClassifier(n_neighbors=5)),
+                    ("model", KNeighborsClassifier()),
                 ]
             ),
         ),
     ]
 
+    # Standard parameter grids keyed by model name (grid uses step name + param)
+    param_grids = {
+        "Logistic Regression (Ridge)": {"model__C": [0.01, 0.1, 1.0, 10.0]},
+        "Logistic Regression (Lasso)": {"model__C": [0.01, 0.1, 1.0, 10.0]},
+        "Random Forest Classifier": {
+            "model__n_estimators": [100, 300],
+            "model__max_depth": [None, 10, 20],
+        },
+        "SVM (Linear)": {"model__C": [0.01, 0.1, 1.0, 10.0]},
+        "SVM (RBF)": {"model__C": [0.1, 1.0, 10.0], "model__gamma": ["scale", "auto"]},
+        "k-NN Classifier": {"model__n_neighbors": [3, 5, 7]},
+    }
+
     classification_records: List[Dict[str, float]] = []
     confusion_matrices: Dict[str, pd.DataFrame] = {}
+    best_estimators: Dict[str, Pipeline] = {}
+    best_params_map: Dict[str, dict] = {}
 
-    for name, model in models:
+    cv_strategy = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
+
+    for name, pipeline in models:
+        grid = param_grids.get(name, {})
         try:
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
+            gs = GridSearchCV(
+                pipeline,
+                grid,
+                cv=cv_strategy,
+                scoring="f1_weighted",
+                n_jobs=-1,
+                error_score="raise",
+            )
+            gs.fit(X_train, y_train)
+            best = gs.best_estimator_
+            y_pred = best.predict(X_test)
         except Exception as e:
-            print(f"Model {name} failed: {e}")
+            print(f"Model {name} failed during GridSearchCV: {e}")
             continue
 
-        metrics = _collect_classification_metrics(model, y_test, y_pred, X_test)
+        metrics = _collect_classification_metrics(best, y_test, y_pred, X_test)
         metrics["model"] = name
+        metrics["best_params"] = gs.best_params_
+        best_params_map[name] = gs.best_params_
         classification_records.append(metrics)
 
         cm = confusion_matrix(y_test, y_pred)
         index_labels = [f"Actual_{label}" for label in class_labels]
         column_labels = [f"Pred_{label}" for label in class_labels]
-        confusion_matrices[name] = pd.DataFrame(
-            cm, index=index_labels, columns=column_labels
-        )
+        confusion_matrices[name] = pd.DataFrame(cm, index=index_labels, columns=column_labels)
+        best_estimators[name] = best
 
     results_df = (
         pd.DataFrame(classification_records).sort_values(by="F1", ascending=False)
@@ -155,7 +175,8 @@ def run_classification_models(
     )
 
     best_model_name = results_df.iloc[0]["model"] if not results_df.empty else None
-    best_model = next((m for n, m in models if n == best_model_name), None)
+    best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
+    best_params = best_params_map.get(best_model_name) if best_model_name is not None else None
 
     return {
         "classification_results": results_df,
@@ -163,6 +184,7 @@ def run_classification_models(
         "class_labels": class_labels,
         "best_model": best_model,
         "best_model_name": best_model_name,
+        "best_params": best_params,
     }
 
 

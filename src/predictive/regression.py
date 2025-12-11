@@ -1,7 +1,5 @@
 """Regression modeling helpers for continuous targets."""
 
-from __future__ import annotations
-
 from typing import Dict, List
 
 import numpy as np
@@ -10,7 +8,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import Lasso, LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -23,8 +21,9 @@ def run_regression_models(
     *,
     test_size: float = 0.2,
     random_state: int = 42,
+    cv: int = 5,
 ) -> Dict[str, object]:
-    """Train baseline regressors and return evaluation artefacts."""
+    """Train baseline regressors using k-fold CV grid search and return evaluation artefacts."""
 
     y_numeric = pd.to_numeric(y, errors="coerce")
     valid_mask = y_numeric.notna()
@@ -41,23 +40,61 @@ def run_regression_models(
 
     models: List[tuple[str, Pipeline]] = _build_regression_models(random_state)
 
+    # Parameter grids keyed by model name
+    param_grids = {
+        "Linear Regression": {},
+        "Ridge Regression": {"model__alpha": [0.1, 1.0, 10.0]},
+        "Lasso Regression": {"model__alpha": [1e-4, 1e-3, 1e-2]},
+        "Kernel Ridge": {"model__alpha": [0.1, 1.0, 10.0]},
+        "Random Forest Regressor": {
+            "model__n_estimators": [100, 300],
+            "model__max_depth": [None, 10, 20],
+        },
+        "SVR (RBF)": {"model__C": [0.1, 1.0, 10.0], "model__gamma": ["scale", "auto"]},
+        "k-NN Regressor": {"model__n_neighbors": [3, 5, 7]},
+    }
+
     regression_records: List[Dict[str, float]] = []
     coefficient_records: List[Dict[str, float]] = []
     residual_payload: Dict[str, Dict[str, np.ndarray]] = {}
+    best_estimators: Dict[str, Pipeline] = {}
+    best_params_map: Dict[str, dict] = {}
 
-    for name, model in models:
+    cv_strategy = KFold(n_splits=cv, shuffle=True, random_state=random_state)
+
+    for name, pipeline in models:
+        grid = param_grids.get(name, {})
         try:
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
+            gs = GridSearchCV(
+                pipeline,
+                grid,
+                cv=cv_strategy,
+                scoring="neg_mean_squared_error",
+                n_jobs=-1,
+                error_score="raise",
+            )
+            gs.fit(X_train, y_train)
+            best = gs.best_estimator_
+            y_pred = best.predict(X_test)
         except Exception:
             continue
 
-        regression_records.append(_collect_regression_metrics(name, y_test, y_pred))
-        coefficient_records.extend(_collect_coefficients(name, model, X_train))
+        # compute evaluation metrics
+        metrics = _collect_regression_metrics(name, y_test, y_pred)
+        metrics["best_params"] = gs.best_params_
+        best_params_map[name] = gs.best_params_
+        regression_records.append(metrics)
+
+        # collect coefficients if available
+        coefficient_records.extend(_collect_coefficients(name, best, X_train))
+
         residual_payload[name] = {
             "pred": np.asarray(y_pred),
             "resid": np.asarray(y_test - y_pred),
         }
+
+        best_estimators[name] = best
+        best_params_map[name] = gs.best_params_
 
     regression_df = (
         pd.DataFrame(regression_records).sort_values(by="RMSE")
@@ -66,10 +103,9 @@ def run_regression_models(
     )
     coefficients_df = pd.DataFrame(coefficient_records)
 
-    best_model_name = (
-        regression_df.iloc[0]["model"] if not regression_df.empty else None
-    )
-    best_model = next((m for n, m in models if n == best_model_name), None)
+    best_model_name = regression_df.iloc[0]["model"] if not regression_df.empty else None
+    best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
+    best_params = best_params_map.get(best_model_name) if best_model_name is not None else None
 
     return {
         "regression_results": regression_df,
@@ -77,6 +113,7 @@ def run_regression_models(
         "residuals": residual_payload,
         "best_model": best_model,
         "best_model_name": best_model_name,
+        "best_params": best_params,
     }
 
 

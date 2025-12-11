@@ -123,7 +123,7 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
     return result
 
 
-def aggregate_health_targets(df: pd.DataFrame, target_feature: str) -> pd.DataFrame:
+def aggregate_health_targets(df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]) -> pd.DataFrame:
     """
     Aggregate relevant health features into a single target feature.
 
@@ -137,37 +137,47 @@ def aggregate_health_targets(df: pd.DataFrame, target_feature: str) -> pd.DataFr
     Returns:
         pd.DataFrame
             DataFrame with the aggregated target feature in the 'target' column.
-        target_type
-            Type of the target feature
+        feature_types
+            Map with features as keys and their types as values
     """
+    feature_types = feature_types.copy()
 
     if target_feature == "cardiovascular":
+        feature_types["target"] = "binary"
+
         return {
             "data": process_cardiovascular_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "binary",
+            "feature_types": feature_types,
         }
     elif target_feature == "sleep_disorder":
+        feature_types["target"] = "continuous"
+
         return {
             "data": process_sleep_disorder_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "continuous",
+            "feature_types": feature_types,
         }
     elif target_feature == "mental_health":
+        feature_types["target"] = "continuous"
+        print(feature_types)
+
         return {
             "data": process_mental_health_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "continuous",
+            "feature_types": feature_types,
         }
     elif target_feature == "respiratory":
+        feature_types["target"] = "binary"
+
         return {
             "data": process_respiratory_target(df, "target").drop(
                 columns=POSSIBLE_TARGET_FEATURES
             ),
-            "target_type": "binary",
+            "feature_types": feature_types,
         }
     else:
         raise ValueError(f"Unknown target feature: {target_feature}")

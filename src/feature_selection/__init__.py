@@ -1,75 +1,28 @@
-from typing import Mapping
-
 import pandas as pd
-
-from src.feature_config import (
-    ALL_CATEGORICAL_FEATURES,
-    ALL_BINARY_FEATURES,
-    ALL_CONTINUOUS_FEATURES,
-)
 
 from .binary import evaluate_binary_target, run_chi_square
 from .continuous import evaluate_continuous_target, run_anova
-
-PredictorRegistry = list[tuple[str, str]]
-
-
-SUPPORTED_TYPES = {"continuous", "binary", "categorical"}
-
-
-def _build_predictor_registry(
-    df: pd.DataFrame,
-    target_feature: str,
-    feature_types: Mapping[str, str] | None = None,
-) -> PredictorRegistry:
-    registry: PredictorRegistry = []
-    registered = set()
-    for column in df.columns:
-        if column == target_feature:
-            continue
-        if column in registered:
-            continue
-
-        predictor_type: str | None = None
-        if feature_types is not None and column in feature_types:
-            predictor_type = feature_types[column]
-            if predictor_type not in SUPPORTED_TYPES:
-                raise ValueError(
-                    f"Feature '{column}' has unsupported type '{predictor_type}'."
-                )
-        elif column in ALL_CONTINUOUS_FEATURES:
-            predictor_type = "continuous"
-        elif column in ALL_BINARY_FEATURES:
-            predictor_type = "binary"
-        elif column in ALL_CATEGORICAL_FEATURES:
-            predictor_type = "categorical"
-
-        if predictor_type is not None:
-            registry.append((column, predictor_type))
-            registered.add(column)
-    return registry
 
 
 def compute_associations(
     df: pd.DataFrame,
     target_feature: str,
-    feature_types: Mapping[str, str] | None = None,
+    feature_types: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run univariate association tests and multicollinearity diagnostics."""
 
     target_type = feature_types["target"]
-    predictor_registry = _build_predictor_registry(df, target_feature, feature_types)
 
     association_records: list[dict[str, float]] = []
     vif_records: list[dict[str, float]] = []
 
     if target_type == "continuous":
         association_records, vif_records = evaluate_continuous_target(
-            df, target_feature, predictor_registry
+            df, target_feature, feature_types
         )
     elif target_type == "binary":
         association_records = evaluate_binary_target(
-            df, target_feature, predictor_registry
+            df, target_feature, feature_types
         )
     else:
         raise ValueError(f"Target feature type '{target_type}' is not supported.")
@@ -88,7 +41,7 @@ def compute_associations(
 def compute_categorical_associations(
     df: pd.DataFrame,
     target_feature: str,
-    feature_types: Mapping[str, str] | None = None,
+    feature_types: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run tests diagnostics for categorical features."""
 
@@ -128,7 +81,7 @@ def compute_categorical_associations(
                     "target": df[target_feature],
                 }
             )
-            records = run_chi_square(col, working)
+            records = run_chi_square(col, working, "categorical")
             if records:
                 chi_rows.extend(records)
         if chi_rows:
