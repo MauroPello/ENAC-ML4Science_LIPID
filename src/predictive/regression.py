@@ -74,6 +74,17 @@ def run_regression_models(
                 error_score="raise",
             )
             gs.fit(X_train, y_train)
+
+            refined_grid = _get_refined_regression_grid(gs.best_params_)
+            gs = GridSearchCV(
+                pipeline,
+                refined_grid,
+                cv=cv_strategy,
+                scoring="neg_mean_squared_error",
+                n_jobs=-1,
+                error_score="raise",
+            )
+            gs.fit(X_train, y_train)
             best = gs.best_estimator_
             y_pred = best.predict(X_test)
         except Exception:
@@ -208,3 +219,73 @@ def _collect_coefficients(
         }
         for feature_name, coef_value in zip(X_train.columns, np.asarray(coefs))
     ]
+
+def _get_refined_regression_grid(
+    best_params: dict,
+) -> dict:
+    """
+    Get the hyperparameter grid to refine the model further, given the previous best params.
+    """
+    refined_grid = {}
+
+    for param_name, best_value in best_params.items():
+        if param_name == "model__alpha":
+            refined_grid[param_name] = [
+                best_value * 0.8,
+                best_value * 0.9,
+                best_value,
+                best_value * 1.1,
+                best_value * 1.2,
+            ]
+        elif param_name == "model__C":
+            refined_grid[param_name] = [
+                best_value * 0.8,
+                best_value * 0.9,
+                best_value,
+                best_value * 1.1,
+                best_value * 1.2,
+            ]
+        elif param_name == "model__n_estimators":
+            base = int(best_value)
+            refined_grid[param_name] = [
+                max(50, base - 20),
+                max(50, base - 10),
+                base,
+                base + 10,
+                base + 20,
+            ]
+        elif param_name == "model__max_depth":
+            # None is a valid value for max_depth, it is handled separately
+            if best_value is None:
+                refined_grid[param_name] = [None]
+            else:
+                base = int(best_value)
+                refined_grid[param_name] = [
+                    max(1, base - 2),
+                    max(1, base - 1),
+                    base,
+                    base + 1,
+                    base + 2,
+                ]
+        elif param_name == "model__gamma":
+            if best_value in ["scale", "auto"]:
+                refined_grid[param_name] = [best_value]
+            else:
+                refined_grid[param_name] = [
+                    best_value * 0.8,
+                    best_value * 0.9,
+                    best_value,
+                    best_value * 1.1,
+                    best_value * 1.2,
+                ]
+        elif param_name == "model__n_neighbors":
+            base = int(best_value) // 2 * 2 + 1
+            refined_grid[param_name] = [
+                max(1, base - 2),
+                base,
+                base + 2,
+            ]
+        else:
+            refined_grid[param_name] = [best_value]
+
+    return refined_grid

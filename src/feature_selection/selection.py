@@ -9,7 +9,6 @@ from typing import List
 
 # Default tolerant thresholds
 DEFAULT_P_VALUE_THRESHOLD = 0.5
-DEFAULT_CORRELATION_THRESHOLD = 0.98
 DEFAULT_VIF_THRESHOLD = 50.0
 
 
