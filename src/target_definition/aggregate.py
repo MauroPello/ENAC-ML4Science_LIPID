@@ -62,16 +62,18 @@ def process_sleep_disorder_target(
     hours = result["sleeping_hours"]
     duration_risk = 1 - np.exp(-((hours - 8) ** 2) / (2 * 2.0**2))
 
-    bedtime_rads = (result["bedtime_hour"] / 24.0) * 2 * np.pi
-    optimal_rads = (23.0 / 24.0) * 2 * np.pi
-    circadian_risk = (1 - np.cos(bedtime_rads - optimal_rads)) / 2.0
+    # bedtime_rads = (result["bedtime_hour"] / 24.0) * 2 * np.pi
+    # optimal_rads = (23.0 / 24.0) * 2 * np.pi
+    # circadian_risk = (1 - np.cos(bedtime_rads - optimal_rads)) / 2.0
 
     deprivation_risk = (
         result["points_sleep_deprivation"] / result["points_sleep_deprivation"].max()
     )
 
     behavioral_risk = (
-        (duration_risk * 0.4) + (circadian_risk * 0.3) + (deprivation_risk * 0.3)
+        # (duration_risk * 0.4) + (circadian_risk * 0.3) + (deprivation_risk * 0.3)
+        (duration_risk * 0.4)
+        + (deprivation_risk * 0.3)
     )
 
     DISORDER_FLOOR = 0.8
@@ -123,7 +125,9 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
     return result
 
 
-def aggregate_health_targets(df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]) -> pd.DataFrame:
+def aggregate_health_targets(
+    df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]
+) -> pd.DataFrame:
     """
     Aggregate relevant health features into a single target feature.
 

@@ -1,6 +1,8 @@
-from typing import Iterable
+from typing import Iterable, Sequence, Tuple
 import pandas as pd
 import re
+
+from scipy.stats import skew
 
 from sklearn.preprocessing import OneHotEncoder
 from src.feature_config import (
@@ -140,6 +142,30 @@ def drop_extra_features(
     )
 
     return features
+
+
+def summarize_continuous_stats(
+    df: pd.DataFrame,
+    columns: Sequence[str],
+) -> pd.DataFrame:
+    """Summarize mean, standard deviation, and skewness for numeric columns."""
+
+    rows: list[dict[str, float]] = []
+    for column in columns:
+        series = pd.to_numeric(df[column], errors="coerce").dropna()
+        if series.empty:
+            continue
+
+        rows.append(
+            {
+                "feature": column,
+                "mean": float(series.mean()),
+                "std": float(series.std(ddof=0)),
+                "skewness": float(skew(series, bias=False)),
+            }
+        )
+
+    return pd.DataFrame(rows)
 
 
 def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:

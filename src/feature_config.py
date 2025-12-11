@@ -1,10 +1,42 @@
+EQ_FEATURES: list[str] = [
+    "lst_mean",
+    "solar_summ",
+    "solar_wint",
+    "pm10_mean",
+    "pm25_mean",
+    "no2_mean",
+    "noiseday_m",
+    "noisenight",
+]
+
+MORPHOLOGY_FEATURES: list[str] = [
+    "building_height",
+    "height_varability",
+    "sky_view_factor",
+    "frontal_area_index",
+    "water_cover_fraction",
+    "impervious_surface_cover_fraction",
+    "building_cover_fraction",
+    "pervious_surface_cover_fraction",
+    "aspect_ratio",
+    "intersections",
+    "length_n-s",
+    "length_ne-sw",
+    "length_se-nw",
+    "length_e-w",
+    "length_primary_road",
+    "length_secondary_road",
+    "length_railway",
+    "neighbourhood_type",
+]
+
 ALL_CONTINUOUS_FEATURES: list[str] = [
-    "PC1",
-    "PC2",
-    "PC3",
-    "PC4",
-    "PC5",
-    "PC6",
+    # "pc1",
+    # "pc2",
+    # "pc3",
+    # "pc4",
+    # "pc5",
+    # "pc6",
     "lst_mean",
     "solar_summ",
     "solar_wint",
@@ -15,16 +47,34 @@ ALL_CONTINUOUS_FEATURES: list[str] = [
     "noisenight",
     "points_sleep_deprivation",
     "sleeping_hours",
-    "bedtime_hour",
+    # "bedtime_hour", removed for now
     "GHQ12_score",
     # ordinal encoded features
     "income",
     "education_level",
     "age_bin",
+    "building_height",
+    "height_varability",
+    "sky_view_factor",
+    "frontal_area_index",
+    "water_cover_fraction",
+    "impervious_surface_cover_fraction",
+    "building_cover_fraction",
+    "pervious_surface_cover_fraction",
+    "aspect_ratio",
+    "intersections",
+    "length_n-s",
+    "length_ne-sw",
+    "length_se-nw",
+    "length_e-w",
+    "length_primary_road",
+    "length_secondary_road",
+    "length_railway",
 ]
 
 ALL_CATEGORICAL_FEATURES: list[str] = [
     "typology",
+    "neighbourhood_type",
 ]
 
 ALL_BINARY_FEATURES: list[str] = [

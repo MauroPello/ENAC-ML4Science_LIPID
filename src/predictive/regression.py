@@ -7,13 +7,14 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import Lasso, LinearRegression, Ridge
-from sklearn.inspection import permutation_importance
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
+
+from src.utils.prediction import collect_coefficients
 
 
 def run_regression_models(
@@ -99,7 +100,7 @@ def run_regression_models(
 
         # collect coefficients if available
         coefficient_records.extend(
-            _collect_coefficients(name, best, X_train, y_train, random_state)
+            collect_coefficients(name, best, X_train, y_train, random_state)
         )
 
         residual_payload[name] = {
@@ -117,9 +118,15 @@ def run_regression_models(
     )
     coefficients_df = pd.DataFrame(coefficient_records)
 
-    best_model_name = regression_df.iloc[0]["model"] if not regression_df.empty else None
-    best_model = best_estimators.get(best_model_name) if best_model_name is not None else None
-    best_params = best_params_map.get(best_model_name) if best_model_name is not None else None
+    best_model_name = (
+        regression_df.iloc[0]["model"] if not regression_df.empty else None
+    )
+    best_model = (
+        best_estimators.get(best_model_name) if best_model_name is not None else None
+    )
+    best_params = (
+        best_params_map.get(best_model_name) if best_model_name is not None else None
+    )
 
     return {
         "regression_results": regression_df,
@@ -200,41 +207,6 @@ def _collect_regression_metrics(
     r2 = float(r2_score(y_test, y_pred))
     return {"model": name, "RMSE": rmse, "MAE": mae, "R2": r2}
 
-
-def _collect_coefficients(
-    name: str,
-    model: Pipeline,
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    random_state: int,
-) -> List[Dict[str, float]]:
-    final_estimator = model.named_steps.get("model", model)
-    if hasattr(final_estimator, "coef_"):
-        coefs = final_estimator.coef_
-        if isinstance(coefs, np.ndarray) and coefs.ndim > 1:
-            coefs = coefs.ravel()
-        values = np.asarray(coefs)
-    elif hasattr(final_estimator, "feature_importances_"):
-        values = np.asarray(final_estimator.feature_importances_)
-    else:
-        perm = permutation_importance(
-            model,
-            X_train,
-            y_train,
-            n_repeats=5,
-            random_state=random_state,
-            n_jobs=-1,
-        )
-        values = np.asarray(perm.importances_mean)
-
-    return [
-        {
-            "model": name,
-            "feature": feature_name,
-            "coefficient": float(coef_value),
-        }
-        for feature_name, coef_value in zip(X_train.columns, values)
-    ]
 
 def _get_refined_regression_grid(
     best_params: dict,
