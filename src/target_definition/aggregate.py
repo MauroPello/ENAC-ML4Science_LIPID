@@ -44,9 +44,8 @@ def process_sleep_disorder_target(
     """
     Process sleep disorder features into a continuous risk score (0-1).
     Duration risk is modeled as a Gaussian centered at 8 hours with a stddev of 2 hours.
-    Bedtime risk is modeled as a cosine distance from an optimal bedtime of 11 PM.
     'points_sleep_deprivation' is included as an additional risk factor.
-    Presence of sleep disorder increases the baseline risk.
+    Presence of sleep disorder during the hot months increases the baseline risk.
 
     Args:
         df (pd.DataFrame): Input dataframe.
