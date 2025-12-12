@@ -44,6 +44,8 @@ def load_combined_dataset(
         how="inner",
     )
 
+    health_df = health_df.head(1000)
+
     merged = pd.merge(morph_df, health_df, on="neighborhood_id", how="inner")
     return merged
 

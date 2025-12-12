@@ -7,6 +7,11 @@ from .binary import evaluate_binary_target, run_chi_square
 from .continuous import evaluate_continuous_target, run_anova
 
 
+# Default tolerant thresholds
+DEFAULT_P_VALUE_THRESHOLD = 0.5
+DEFAULT_VIF_THRESHOLD = 50.0
+
+
 def compute_associations(
     df: pd.DataFrame,
     target_feature: str,
@@ -15,9 +20,7 @@ def compute_associations(
     """Run univariate association tests and multicollinearity diagnostics."""
 
     target_type = feature_types["target"]
-
     association_records: list[dict[str, float]] = []
-    vif_records: list[dict[str, float]] = []
 
     if target_type == "continuous":
         association_records = evaluate_continuous_target(
@@ -32,12 +35,7 @@ def compute_associations(
     if not association_df.empty:
         association_df = association_df.sort_values(by="p_value", na_position="last")
 
-    vif_records = compute_vif(df, feature_types)
-    vif_df = pd.DataFrame(vif_records)
-    if not vif_df.empty:
-        vif_df = vif_df.sort_values(by="statistic_value", ascending=False)
-
-    return association_df, vif_df
+    return association_df
 
 
 def compute_vif(
@@ -145,3 +143,69 @@ def compute_categorical_associations(
             f"Association tests are only defined for continuous or binary targets (got '{feature_types['target']}')."
         )
     return pd.DataFrame()
+
+
+def filter_by_p_value(
+    association_df: pd.DataFrame,
+    threshold: float = DEFAULT_P_VALUE_THRESHOLD,
+) -> list[str]:
+    """
+    Filter features based on p-value threshold.
+
+    Only removes features with p-value above threshold (clearly non-significant).
+
+    Args:
+        association_df (pd.DataFrame): DataFrame with 'predictor' and 'p_value' columns
+            (output from compute_associations).
+        threshold (float): Maximum p-value to keep a feature (default: 0.5).
+
+    Returns:
+        List[str]: List of feature names that pass the threshold.
+    """
+    if association_df.empty or "p_value" not in association_df.columns:
+        return []
+
+    # Group by predictor and keep if ANY test passes the threshold
+    passed = (
+        association_df.groupby("predictor")["p_value"]
+        .min()
+        .loc[lambda x: x <= threshold]
+    )
+    return passed.index.tolist()
+
+
+def filter_by_vif(
+    vif_df: pd.DataFrame,
+    threshold: float = DEFAULT_VIF_THRESHOLD,
+) -> list[str]:
+    """
+    Filter features with extreme multicollinearity based on VIF.
+
+    Only removes features with very high VIF values.
+
+    Args:
+        vif_df (pd.DataFrame): DataFrame with 'predictor' and 'statistic_value' columns
+            (VIF output from compute_associations).
+        threshold (float): Maximum VIF to keep a feature (default: 50.0).
+
+    Returns:
+        List[str]: List of feature names that pass the threshold.
+    """
+    if vif_df.empty or "statistic_value" not in vif_df.columns:
+        return []
+
+    passed = vif_df[vif_df["statistic_value"] <= threshold]["predictor"]
+    return passed.tolist()
+
+
+def drop_features(dataset, feature_types, features_to_drop):
+    if not features_to_drop:
+        return dataset, feature_types
+
+    dataset = dataset.drop(columns=features_to_drop)
+    feature_types = {
+        feature: type
+        for feature, type in feature_types.items()
+        if feature not in features_to_drop
+    }
+    return dataset, feature_types

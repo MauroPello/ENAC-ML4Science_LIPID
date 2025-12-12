@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 
 from .classification import run_classification_models
 from .regression import run_regression_models
@@ -27,6 +28,10 @@ def run_modeling_suite(
         "residuals": {},
         "confusion_matrices": {},
         "class_labels": np.array([]),
+        "best_model": None,
+        "best_model_fitted": None,
+        "best_params": None,
+        "best_model_name": None,
     }
 
     if target_type == "continuous":
@@ -43,5 +48,16 @@ def run_modeling_suite(
         raise ValueError(
             "Only continuous and binary targets are supported for prediction."
         )
+
+    # Fit the best model on the full dataset for downstream inference use.
+    best_model = results.get("best_model")
+    if best_model is not None:
+        try:
+            best_model_full = clone(best_model)
+            best_model_full.fit(X, y)
+            results["best_model_fitted"] = best_model_full
+        except Exception:
+            # If cloning fails (e.g., custom estimator), fall back to the trained instance
+            results["best_model_fitted"] = best_model
 
     return results
