@@ -64,7 +64,9 @@ def collect_coefficients(
     ]
 
 
-def _predict_scores(model: Pipeline, features: pd.DataFrame, target_type: str) -> np.ndarray:
+def _predict_scores(
+    model: Pipeline, features: pd.DataFrame, target_type: str
+) -> np.ndarray:
     """Predict probabilities or scores while handling binary/continuous targets.
 
     For binary targets, tries `predict_proba`, then `decision_function`, then
@@ -149,6 +151,7 @@ def infer_neighborhood_health_risks(
     feature_types_map: dict[str, dict[str, str]],
     morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
     socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
+    display_columns: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Score health risks per neighborhood across socio-demographic combinations.
 
@@ -163,9 +166,13 @@ def infer_neighborhood_health_risks(
         neighborhood id, socio-demographic combination, and the predicted risk column.
     """
 
-    expanded = _expand_neighborhood_grid(
-        morph_csv_path, socio_config=socio_config
-    )
+    expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=socio_config)
+    extra_cols: list[str] = []
+    if display_columns:
+        extra_cols = [col for col in display_columns if col in expanded.columns]
+        missing = [col for col in display_columns if col not in expanded.columns]
+        if missing:
+            print(f"Columns not found in morphology data and skipped: {missing}")
 
     processed = _preprocess_for_inference(expanded)
 
@@ -183,14 +190,12 @@ def infer_neighborhood_health_risks(
         target_type = feature_types.get("target", "binary")
         expected_features = [name for name in feature_types.keys() if name != "target"]
 
-        aligned = _align_feature_space(
-            processed, expected_features=expected_features
-        )
+        aligned = _align_feature_space(processed, expected_features=expected_features)
 
         scores = _predict_scores(model, aligned, target_type=target_type)
         scores = np.clip(scores, 0.0, 1.0)
 
-        result = expanded[["neighborhood_id"] + socio_cols].copy()
+        result = expanded[["id"] + socio_cols + extra_cols].copy()
         result[f"risk_{health_key}"] = scores
 
         outputs[health_key] = result

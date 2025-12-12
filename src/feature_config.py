@@ -116,12 +116,12 @@ POSSIBLE_TARGET_FEATURES: list[str] = (
 
 EXPECTED_HOURS: dict[str, int] = {
     "Early Childhood (0-6y)": 12,  # mid of toddler/preschool 11-14/10-13h
-    "Children (6-12y)": 10,        # mid of 9-11h
-    "Teenagers (12-18y)": 9,       # mid of 8-10h
-    "Young Adults (18-30y)": 8,    # mid of 7-9h
-    "Adults (30-50y)": 8,          # mid of 7-9h
+    "Children (6-12y)": 10,  # mid of 9-11h
+    "Teenagers (12-18y)": 9,  # mid of 8-10h
+    "Young Adults (18-30y)": 8,  # mid of 7-9h
+    "Adults (30-50y)": 8,  # mid of 7-9h
     "Middle-Aged Adults (50-70y)": 8,  # near upper end of 7-9h
-    "Older Adults (70+y)": 7,      # lower end of 7-8h
+    "Older Adults (70+y)": 7,  # lower end of 7-8h
 }
 
 SOCIO_DEMOGRAPHIC_VALUES = {

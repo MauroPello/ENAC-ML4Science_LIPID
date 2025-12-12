@@ -145,42 +145,34 @@ def aggregate_health_targets(
             - 'feature_types' (dict[str, str]): Updated feature types map.
     """
     feature_types = feature_types.copy()
+    feature_types = {
+        feature: type
+        for feature, type in feature_types.items()
+        if feature not in POSSIBLE_TARGET_FEATURES
+    }
 
     if target_feature == "cardiovascular":
         feature_types["target"] = "binary"
-
-        return {
-            "data": process_cardiovascular_target(df, "target").drop(
-                columns=POSSIBLE_TARGET_FEATURES
-            ),
-            "feature_types": feature_types,
-        }
+        dataset = process_cardiovascular_target(df, "target").drop(
+            columns=POSSIBLE_TARGET_FEATURES
+        )
     elif target_feature == "sleep_disorder":
         feature_types["target"] = "continuous"
-
-        return {
-            "data": process_sleep_disorder_target(df, "target").drop(
-                columns=POSSIBLE_TARGET_FEATURES
-            ),
-            "feature_types": feature_types,
-        }
+        dataset = process_sleep_disorder_target(df, "target").drop(
+            columns=POSSIBLE_TARGET_FEATURES
+        )
     elif target_feature == "mental_health":
         feature_types["target"] = "continuous"
-
-        return {
-            "data": process_mental_health_target(df, "target").drop(
-                columns=POSSIBLE_TARGET_FEATURES
-            ),
-            "feature_types": feature_types,
-        }
+        dataset = process_mental_health_target(df, "target").drop(
+            columns=POSSIBLE_TARGET_FEATURES
+        )
     elif target_feature == "respiratory":
         feature_types["target"] = "binary"
+        dataset = process_respiratory_target(df, "target").drop(
+            columns=POSSIBLE_TARGET_FEATURES
+        )
 
-        return {
-            "data": process_respiratory_target(df, "target").drop(
-                columns=POSSIBLE_TARGET_FEATURES
-            ),
-            "feature_types": feature_types,
-        }
-    else:
-        raise ValueError(f"Unknown target feature: {target_feature}")
+    return {
+        "data": dataset,
+        "feature_types": feature_types,
+    }
