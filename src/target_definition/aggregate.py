@@ -14,6 +14,7 @@ import numpy as np
 
 from src.feature_config import (
     CARDIOVASCULAR_FEATURES,
+    EXPECTED_HOURS,
     MENTAL_HEALTH_FEATURES,
     RESPIRATORY_FEATURES,
     POSSIBLE_TARGET_FEATURES,
@@ -43,9 +44,10 @@ def process_sleep_disorder_target(
 ) -> pd.DataFrame:
     """
     Process sleep disorder features into a continuous risk score (0-1).
-    Duration risk is modeled as a Gaussian centered at 8 hours with a stddev of 2 hours.
-    'points_sleep_deprivation' is included as an additional risk factor.
-    Presence of sleep disorder during the hot months increases the baseline risk.
+    Duration risk is modeled as a Gaussian centered on age-specific expected sleep hours
+    (from EXPECTED_HOURS) with a stddev of 2 hours. 'points_sleep_deprivation' is
+    included as an additional risk factor. Presence of sleep disorder during the hot
+    months increases the baseline risk.
 
     Args:
         df (pd.DataFrame): Input dataframe.
@@ -56,8 +58,13 @@ def process_sleep_disorder_target(
     """
     result = df.copy()
 
-    hours = result["sleeping_hours"]
-    duration_risk = 1 - np.exp(-((hours - 8) ** 2) / (2 * 2.0**2))
+    hours = pd.to_numeric(result["sleeping_hours"], errors="coerce")
+    expected_hours = result.get("age_bin")
+    expected_hours = expected_hours.map(EXPECTED_HOURS).fillna(8)
+
+    std_hours = 2.0
+    duration_risk = 1 - np.exp(-((hours - expected_hours) ** 2) / (2 * std_hours**2))
+    duration_risk = duration_risk.fillna(0)
 
     # bedtime_rads = (result["bedtime_hour"] / 24.0) * 2 * np.pi
     # optimal_rads = (23.0 / 24.0) * 2 * np.pi

@@ -106,19 +106,28 @@ def process_additional_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def assign_age_quantile_bins(
+def assign_age_bins(
     df: pd.DataFrame,
     age_column: str = "age",
     output_column: str = "age_bin",
-    max_bins: int = 4,
 ) -> pd.DataFrame:
-    """Create quantile-based age bins so each bin has comparable counts.
+    """Bucket ages into fixed, interpretable ranges instead of quantiles.
+
+    The bins are inspired by CDC/WHO adult health groups and pediatric sleep
+    guidance, providing clearer semantic meaning while using fewer pediatric
+    splits:
+        - Early Childhood (0-6y)
+        - Children (6-12y)
+        - Teenagers (12-18y)
+        - Young Adults (18-30y)
+        - Adults (30-50y)
+        - Middle-Aged Adults (50-70y)
+        - Older Adults (70+y)
 
     Args:
         df (pd.DataFrame): Input dataframe.
         age_column (str): Name of the age column.
         output_column (str): Name of the output bin column.
-        max_bins (int): Maximum number of bins to create.
 
     Returns:
         pd.DataFrame: Dataframe with added age bin column.
@@ -129,31 +138,48 @@ def assign_age_quantile_bins(
         df[output_column] = pd.NA
         return df
 
-    unique_count = df[age_column].dropna().nunique()
-    if unique_count < 2:
-        df[output_column] = pd.NA
-        return df
+    age_series = pd.to_numeric(df[age_column], errors="coerce")
 
-    age_bin_series = pd.qcut(
-        df[age_column],
-        q=min(max_bins, unique_count),
-        duplicates="drop",
+    bins = [
+        float("-inf"),
+        6.0,
+        12.0,
+        18.0,
+        30.0,
+        50.0,
+        70.0,
+        float("inf"),
+    ]
+    labels = [
+        "Early Childhood (0-6y)",
+        "Children (6-12y)",
+        "Teenagers (12-18y)",
+        "Young Adults (18-30y)",
+        "Adults (30-50y)",
+        "Middle-Aged Adults (50-70y)",
+        "Older Adults (70+y)",
+    ]
+
+    df[output_column] = pd.cut(
+        age_series,
+        bins=bins,
+        labels=labels,
+        right=False,
+        include_lowest=True,
     )
 
-    age_labels = []
-    for idx, interval in enumerate(age_bin_series.cat.categories):
-        left_edge = interval.left
-        right_edge = interval.right
-        if idx == 0:
-            label = f"<= {int(round(right_edge))}"
-        elif idx == len(age_bin_series.cat.categories) - 1:
-            label = f"> {int(round(left_edge))}"
-        else:
-            label = f"{int(round(left_edge))}-{int(round(right_edge))}"
-        age_labels.append(label)
-
-    df[output_column] = age_bin_series.cat.rename_categories(age_labels)
     return df
+
+
+def assign_age_quantile_bins(
+    df: pd.DataFrame,
+    age_column: str = "age",
+    output_column: str = "age_bin",
+    max_bins: int = 4,
+) -> pd.DataFrame:
+    """Backward-compatible wrapper that now delegates to fixed age bins."""
+
+    return assign_age_bins(df, age_column=age_column, output_column=output_column)
 
 
 def drop_extra_features(
@@ -258,7 +284,7 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     Run the full data preprocessing pipeline
     It is assumed that the input dataframe has already been loaded using load_combined_dataset.
     The sequence of preprocessing steps is:
-    1. Assign age quantile bins
+    1. Assign fixed age bins
     2. Encode ordinal features
     3. Process additional features
 
@@ -268,7 +294,7 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The processed dataframe.
     """
-    processed_df = assign_age_quantile_bins(df)
+    processed_df = assign_age_bins(df)
     processed_df = encode_ordinal_features(processed_df)
     processed_df = process_additional_features(processed_df)
     processed_df = drop_extra_features(processed_df)
