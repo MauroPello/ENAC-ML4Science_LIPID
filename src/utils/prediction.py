@@ -1,7 +1,18 @@
+from copy import deepcopy
+from itertools import product
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
+
+from src.feature_config import SOCIO_DEMOGRAPHIC_VALUES
+from src.utils.pipeline import (
+    drop_extra_features,
+    encode_ordinal_features,
+    process_additional_features,
+)
 
 
 def collect_coefficients(
@@ -51,3 +62,137 @@ def collect_coefficients(
         }
         for feature_name, coef_value in zip(X_train.columns, values)
     ]
+
+
+def _predict_scores(model: Pipeline, features: pd.DataFrame, target_type: str) -> np.ndarray:
+    """Predict probabilities or scores while handling binary/continuous targets.
+
+    For binary targets, tries `predict_proba`, then `decision_function`, then
+    falls back to hard labels. Continuous targets use `predict`.
+    """
+
+    if target_type == "binary":
+        try:
+            proba = model.predict_proba(features)
+            if proba.ndim > 1 and proba.shape[1] > 1:
+                return proba[:, 1]
+            return proba[:, 0]
+        except Exception:
+            try:
+                scores = model.decision_function(features)
+                return 1 / (1 + np.exp(-scores))
+            except Exception:
+                return model.predict(features)
+
+    preds = model.predict(features)
+    return np.asarray(preds)
+
+
+def _expand_neighborhood_grid(
+    morph_csv_path: str | Path,
+    socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
+) -> tuple[pd.DataFrame, str]:
+    """Load neighborhood data and cross-join all socio-demographic combinations."""
+
+    morph_df = pd.read_csv(morph_csv_path)
+    socio_cols = list(socio_config.keys())
+    socio_combos = pd.DataFrame(
+        list(product(*[socio_config[col] for col in socio_cols])), columns=socio_cols
+    )
+
+    expanded = (
+        morph_df.assign(_tmp_key=1)
+        .merge(socio_combos.assign(_tmp_key=1), on="_tmp_key")
+        .drop(columns="_tmp_key")
+    )
+
+    return expanded
+
+
+def _preprocess_for_inference(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply the same numeric/categorical encodings used during training."""
+
+    processed = encode_ordinal_features(df)
+    processed = process_additional_features(processed)
+    processed = drop_extra_features(processed)
+    return processed
+
+
+def _align_feature_space(
+    df: pd.DataFrame,
+    expected_features: list[str],
+) -> pd.DataFrame:
+    """Ensure the dataframe matches the training feature space, including typology dummies."""
+
+    df = df.copy()
+    expected_typology_cols = [c for c in expected_features if c.startswith("typology_")]
+
+    if expected_typology_cols:
+        dummies = pd.get_dummies(df["typology"], prefix="typology")
+        for col in expected_typology_cols:
+            df[col] = dummies.get(col, 0)
+
+        df = df.drop(columns=["typology"])
+    else:
+        df = df.drop(columns=["typology"], errors="ignore")
+
+    for col in expected_features:
+        if col not in df.columns:
+            df[col] = 0
+
+    df = df[[col for col in expected_features]]
+    return df
+
+
+def infer_neighborhood_health_risks(
+    best_models: dict[str, Pipeline],
+    feature_types_map: dict[str, dict[str, str]],
+    morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
+    socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
+) -> dict[str, pd.DataFrame]:
+    """Score health risks per neighborhood across socio-demographic combinations.
+
+    Args:
+        best_models: Mapping from health category (e.g., "mental_health") to fitted estimator.
+        feature_types_map: Mapping from health category to feature_types dict used in training.
+        morph_csv_path: Path to the neighborhoods CSV (cleaned morphology).
+        socio_config: Dict of socio-demographic feature -> list of possible values.
+
+    Returns:
+        Dict[str, pd.DataFrame]: For each health category, a dataframe containing
+        neighborhood id, socio-demographic combination, and the predicted risk column.
+    """
+
+    expanded = _expand_neighborhood_grid(
+        morph_csv_path, socio_config=socio_config
+    )
+
+    processed = _preprocess_for_inference(expanded)
+
+    socio_cols = list(socio_config.keys())
+    outputs: dict[str, pd.DataFrame] = {}
+
+    for health_key, model in best_models.items():
+        if model is None:
+            continue
+
+        feature_types = feature_types_map.get(health_key)
+        if not feature_types:
+            continue
+
+        target_type = feature_types.get("target", "binary")
+        expected_features = [name for name in feature_types.keys() if name != "target"]
+
+        aligned = _align_feature_space(
+            processed, expected_features=expected_features
+        )
+
+        scores = _predict_scores(model, aligned, target_type=target_type)
+        scores = np.clip(scores, 0.0, 1.0)
+
+        result = expanded[["neighborhood_id"] + socio_cols].copy()
+        result[f"risk_{health_key}"] = scores
+
+        outputs[health_key] = result
+
+    return outputs

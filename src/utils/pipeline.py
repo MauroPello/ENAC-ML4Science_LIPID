@@ -9,6 +9,7 @@ from src.feature_config import (
     ALL_CATEGORICAL_FEATURES,
     ALL_BINARY_FEATURES,
     ALL_CONTINUOUS_FEATURES,
+    EXPECTED_HOURS,
     POSSIBLE_TARGET_FEATURES,
 )
 
@@ -43,8 +44,6 @@ def load_combined_dataset(
         on=["participant_id", "neighborhood_id"],
         how="inner",
     )
-
-    health_df = health_df.head(1000)
 
     merged = pd.merge(morph_df, health_df, on="neighborhood_id", how="inner")
     return merged
@@ -152,15 +151,7 @@ def assign_age_bins(
         70.0,
         float("inf"),
     ]
-    labels = [
-        "Early Childhood (0-6y)",
-        "Children (6-12y)",
-        "Teenagers (12-18y)",
-        "Young Adults (18-30y)",
-        "Adults (30-50y)",
-        "Middle-Aged Adults (50-70y)",
-        "Older Adults (70+y)",
-    ]
+    labels = EXPECTED_HOURS.keys()
 
     df[output_column] = pd.cut(
         age_series,

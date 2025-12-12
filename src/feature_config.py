@@ -123,3 +123,10 @@ EXPECTED_HOURS: dict[str, int] = {
     "Middle-Aged Adults (50-70y)": 8,  # near upper end of 7-9h
     "Older Adults (70+y)": 7,      # lower end of 7-8h
 }
+
+SOCIO_DEMOGRAPHIC_VALUES = {
+    "income": ["<50k", "50–100k", "100–150k", ">150k"],
+    "education_level": ["primary", "secondary", "tertiary"],
+    "age_bin": EXPECTED_HOURS.keys(),
+    "sex": ["M", "F"],
+}
