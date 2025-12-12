@@ -19,7 +19,17 @@ def load_combined_dataset(
     socio_sheet: str = "Participant_SocioDemograph_Data",
     clinical_sheet: str = "Participant_HEALTH_Data",
 ) -> pd.DataFrame:
-    """Load and merge morphology and health data into a single DataFrame."""
+    """Load and merge morphology and health data into a single DataFrame.
+
+    Args:
+        morph_csv_path (str): Path to the morphology data CSV.
+        health_excel_path (str): Path to the health data Excel file.
+        socio_sheet (str): Sheet name for socio-demographic data.
+        clinical_sheet (str): Sheet name for clinical health data.
+
+    Returns:
+        pd.DataFrame: Merged dataframe containing morphology and health data.
+    """
 
     morph_df = pd.read_csv(morph_csv_path)
     if "id" in morph_df.columns and "neighborhood_id" not in morph_df.columns:
@@ -39,7 +49,14 @@ def load_combined_dataset(
 
 
 def encode_ordinal_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Encode ordinal categorical features into integers."""
+    """Encode ordinal categorical features into integers.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+
+    Returns:
+        pd.DataFrame: Dataframe with encoded ordinal features.
+    """
     df = df.copy()
 
     income_map = {"Low": 0, "Medium": 1, "High": 2}
@@ -69,7 +86,14 @@ def encode_ordinal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def process_additional_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Process other non-numeric features like time and binary categories."""
+    """Process other non-numeric features like time and binary categories.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+
+    Returns:
+        pd.DataFrame: Dataframe with processed additional features.
+    """
     df = df.copy()
 
     if "bedtime_hour" in df.columns:
@@ -88,7 +112,17 @@ def assign_age_quantile_bins(
     output_column: str = "age_bin",
     max_bins: int = 4,
 ) -> pd.DataFrame:
-    """Create quantile-based age bins so each bin has comparable counts."""
+    """Create quantile-based age bins so each bin has comparable counts.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        age_column (str): Name of the age column.
+        output_column (str): Name of the output bin column.
+        max_bins (int): Maximum number of bins to create.
+
+    Returns:
+        pd.DataFrame: Dataframe with added age bin column.
+    """
 
     df = df.copy()
     if age_column not in df.columns:
@@ -126,7 +160,15 @@ def drop_extra_features(
     df: pd.DataFrame,
     excluded_targets: Iterable[str] = (),
 ) -> pd.DataFrame:
-    """Prepare the feature matrix used for modeling."""
+    """Prepare the feature matrix used for modeling.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        excluded_targets (Iterable[str]): List of target columns to exclude.
+
+    Returns:
+        pd.DataFrame: Feature matrix containing only allowed features.
+    """
 
     allowed = set(
         ALL_CATEGORICAL_FEATURES
@@ -148,7 +190,15 @@ def summarize_continuous_stats(
     df: pd.DataFrame,
     columns: Sequence[str],
 ) -> pd.DataFrame:
-    """Summarize mean, standard deviation, and skewness for numeric columns."""
+    """Summarize mean, standard deviation, and skewness for numeric columns.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        columns (Sequence[str]): List of column names to summarize.
+
+    Returns:
+        pd.DataFrame: Summary dataframe with statistics for each column.
+    """
 
     rows: list[dict[str, float]] = []
     for column in columns:
@@ -175,6 +225,13 @@ def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
     Creates binary columns for each category in 'typology' and removes
     the original column. Returns the dataframe unchanged if 'typology'
     is missing.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        feature_types (dict): Dictionary mapping feature names to types.
+
+    Returns:
+        Tuple[pd.DataFrame, dict]: Tuple containing the dataframe with OHE features and the updated feature types.
     """
     df = df.copy()
     if "typology" not in df.columns:
@@ -206,11 +263,10 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     3. Process additional features
 
     Args:
-        df: pd.DataFrame
-            The input dataframe to process.
+        df (pd.DataFrame): The input dataframe to process.
+
     Returns:
-        pd.DataFrame
-            The processed dataframe.
+        pd.DataFrame: The processed dataframe.
     """
     processed_df = assign_age_quantile_bins(df)
     processed_df = encode_ordinal_features(processed_df)

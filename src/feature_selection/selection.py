@@ -22,12 +22,12 @@ def filter_by_p_value(
     Only removes features with p-value above threshold (clearly non-significant).
 
     Args:
-        association_df: DataFrame with 'predictor' and 'p_value' columns
+        association_df (pd.DataFrame): DataFrame with 'predictor' and 'p_value' columns
             (output from compute_associations).
-        threshold: Maximum p-value to keep a feature (default: 0.5).
+        threshold (float): Maximum p-value to keep a feature (default: 0.5).
 
     Returns:
-        List of feature names that pass the threshold.
+        List[str]: List of feature names that pass the threshold.
     """
     if association_df.empty or "p_value" not in association_df.columns:
         return []
@@ -51,12 +51,12 @@ def filter_by_vif(
     Only removes features with very high VIF values.
 
     Args:
-        vif_df: DataFrame with 'predictor' and 'statistic_value' columns
+        vif_df (pd.DataFrame): DataFrame with 'predictor' and 'statistic_value' columns
             (VIF output from compute_associations).
-        threshold: Maximum VIF to keep a feature (default: 50.0).
+        threshold (float): Maximum VIF to keep a feature (default: 50.0).
 
     Returns:
-        List of feature names that pass the threshold.
+        List[str]: List of feature names that pass the threshold.
     """
     if vif_df.empty or "statistic_value" not in vif_df.columns:
         return []

@@ -25,14 +25,11 @@ def process_cardiovascular_target(df: pd.DataFrame, target_column: str) -> pd.Da
     Process and aggregate cardiovascular-related features into a single target column.
 
     Args:
-        df: pd.DataFrame
-            The input dataframe containing cardiovascular features.
-        target_column: str
-            The name of the target column to create.
+        df (pd.DataFrame): The input dataframe containing cardiovascular features.
+        target_column (str): The name of the target column to create.
 
     Returns:
-        pd.DataFrame
-            DataFrame with the aggregated cardiovascular target feature in the specified target column.
+        pd.DataFrame: DataFrame with the aggregated cardiovascular target feature in the specified target column.
     """
     result = df.copy()
     # If any cardiovascular feature is 1, set target to 1, else 0
@@ -52,10 +49,11 @@ def process_sleep_disorder_target(
     Presence of sleep disorder increases the baseline risk.
 
     Args:
-        df: Input dataframe.
-        target_column: Name of the output column.
+        df (pd.DataFrame): Input dataframe.
+        target_column (str): Name of the output column.
+
     Returns:
-        pd.DataFrame with the new target column.
+        pd.DataFrame: Dataframe with the new target column.
     """
     result = df.copy()
 
@@ -92,11 +90,11 @@ def process_mental_health_target(df: pd.DataFrame, target_column: str) -> pd.Dat
     for detecting psychiatric cases (Goldberg et al., 1997).
 
     Args:
-        df: Input dataframe.
-        target_column: Name of the output column.
+        df (pd.DataFrame): Input dataframe.
+        target_column (str): Name of the output column.
 
     Returns:
-        pd.DataFrame with the new target column.
+        pd.DataFrame: Dataframe with the new target column.
     """
     steepness, threshold = 0.8, 4.0
     result = df.copy()
@@ -111,13 +109,11 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
     Process and aggregate respiratory-related features into a single target column.
 
     Args:
-        df: pd.DataFrame
-            The input dataframe containing respiratory features.
-        target_column: str
-            The name of the target column to create.
+        df (pd.DataFrame): The input dataframe containing respiratory features.
+        target_column (str): The name of the target column to create.
+
     Returns:
-        pd.DataFrame
-            DataFrame with the aggregated respiratory target feature in the specified target column.
+        pd.DataFrame: DataFrame with the aggregated respiratory target feature in the specified target column.
     """
     result = df.copy()
     # If any respiratory feature is 1, set target to 1, else 0
@@ -127,22 +123,20 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
 
 def aggregate_health_targets(
     df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]
-) -> pd.DataFrame:
+) -> dict:
     """
     Aggregate relevant health features into a single target feature.
 
     Args:
-        df: pd.DataFrame
-            The input dataframe containing health features.
-        target_feature: str
-            The target health condition to aggregate
+        df (pd.DataFrame): The input dataframe containing health features.
+        target_feature (str): The target health condition to aggregate.
             Must be in ('cardiovascular', 'sleep_disorder', 'mental_health', 'respiratory').
+        feature_types (dict[str, str]): Map with features as keys and their types as values.
 
     Returns:
-        pd.DataFrame
-            DataFrame with the aggregated target feature in the 'target' column.
-        feature_types
-            Map with features as keys and their types as values
+        dict: Dictionary containing:
+            - 'data' (pd.DataFrame): DataFrame with the aggregated target feature.
+            - 'feature_types' (dict[str, str]): Updated feature types map.
     """
     feature_types = feature_types.copy()
 

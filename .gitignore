@@ -5,3 +5,6 @@ data/*
 # Cache files
 __pycache__
 .DS_Store
+
+# Results
+results/*

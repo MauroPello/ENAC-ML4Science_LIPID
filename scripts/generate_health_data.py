@@ -13,12 +13,25 @@ root = Path(__file__).parent.parent
 sys.path.append(str(root))
 
 
-def set_seed(seed=42):
+def set_seed(seed: int = 42) -> None:
+    """Set random seeds for reproducibility.
+
+    Args:
+        seed (int): The seed value to use.
+    """
     random.seed(seed)
     np.random.seed(seed)
 
 
-def _get_neighborhoods_ids(path):
+def _get_neighborhoods_ids(path: Path) -> np.ndarray:
+    """Read neighborhood IDs from the morphology data file.
+
+    Args:
+        path (Path): Path to the morphology data CSV.
+
+    Returns:
+        np.ndarray: Array of unique neighborhood IDs.
+    """
     morphology_data = pandas.read_csv(path)
     neighborhoods_ids = morphology_data["id"].unique()
     return neighborhoods_ids
@@ -29,7 +42,15 @@ def generate_health_data(
     morphology_data_path: Path = root / "data" / "morphology_data_cleaned.csv",
     participants_per_neighborhood_range: tuple = (8, 15),
     output_path: Path = root / "data" / "synthetic_health_data.xlsx",
-):
+) -> None:
+    """Generate synthetic health data linked to neighborhood morphology.
+
+    Args:
+        root (Path): Root directory of the project.
+        morphology_data_path (Path): Path to the cleaned morphology data.
+        participants_per_neighborhood_range (tuple): Min and max participants per neighborhood.
+        output_path (Path): Path to save the generated excel file.
+    """
 
     # Reproducibility
     set_seed(42)

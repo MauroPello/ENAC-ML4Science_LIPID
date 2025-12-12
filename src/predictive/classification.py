@@ -35,6 +35,16 @@ def run_classification_models(
     """Train baseline classifiers with k-fold CV grid search and return evaluation artefacts.
 
     Uses `StratifiedKFold` and `GridSearchCV` with standard parameter grids.
+
+    Args:
+        X (pd.DataFrame): Feature matrix.
+        y (pd.Series): Target vector.
+        test_size (float): Proportion of dataset to include in the test split.
+        random_state (int): Random state for reproducibility.
+        cv (int): Number of folds for cross-validation.
+
+    Returns:
+        Dict[str, object]: A dictionary containing classification results and artifacts.
     """
 
     label_encoder = LabelEncoder()
@@ -218,12 +228,17 @@ def run_classification_models(
     }
 
 
-def _collect_classification_metrics(
-    model: Pipeline,
-    y_test: np.ndarray,
-    y_pred: np.ndarray,
-    X_test: pd.DataFrame,
-) -> Dict[str, float]:
+    """Collect evaluation metrics for classification.
+
+    Args:
+        model (Pipeline): The trained model pipeline.
+        y_test (np.ndarray): True labels for the test set.
+        y_pred (np.ndarray): Predicted labels for the test set.
+        X_test (pd.DataFrame): Test feature matrix.
+
+    Returns:
+        Dict[str, float]: A dictionary containing the evaluation metrics.
+    """
     accuracy = float(accuracy_score(y_test, y_pred))
     precision = float(
         precision_score(y_test, y_pred, average="weighted", zero_division=0)
@@ -255,6 +270,15 @@ def _collect_classification_metrics(
 
 
 def _safe_prediction_scores(model: Pipeline, X_test: pd.DataFrame) -> np.ndarray | None:
+    """Get prediction scores (probabilities or decision function) safely.
+
+    Args:
+        model (Pipeline): The trained model pipeline.
+        X_test (pd.DataFrame): Test feature matrix.
+
+    Returns:
+        np.ndarray | None: Prediction scores if available, otherwise None.
+    """
     try:
         return model.predict_proba(X_test)[:, 1]
     except Exception:
@@ -271,6 +295,12 @@ def _get_refined_classification_grid(
 ) -> dict:
     """
     Get the hyperparameter grid to refine the model further, given the previous best params.
+
+    Args:
+        best_params (dict): Dictionary of best parameters found in the initial search.
+
+    Returns:
+        dict: A refined hyperparameter grid for the next search.
     """
     refined_grid = {}
 

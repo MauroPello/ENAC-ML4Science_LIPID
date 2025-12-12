@@ -11,7 +11,16 @@ def evaluate_binary_target(
     target_feature: str,
     feature_types: dict[str, str],
 ) -> list[dict[str, float]]:
-    """Compute association metrics when the target variable is binary."""
+    """Compute association metrics when the target variable is binary.
+
+    Args:
+        df (pd.DataFrame): The dataframe containing the data.
+        target_feature (str): The name of the target feature column.
+        feature_types (dict[str, str]): A dictionary mapping feature names to their types.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing association metrics.
+    """
 
     association_records: list[dict[str, float]] = []
     target_series = df[target_feature]
@@ -50,7 +59,16 @@ def evaluate_binary_target(
 def _run_logistic(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> list[dict[str, float]]:
-    """Run univariate logistic regression for a single predictor."""
+    """Run univariate logistic regression for a single predictor.
+
+    Args:
+        column (str): The name of the predictor column.
+        predictor_type (str): The type of the predictor.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the logistic regression results.
+    """
 
     numeric = pd.to_numeric(working["predictor"], errors="coerce").dropna()
     if numeric.empty or numeric.nunique() < 2:
@@ -82,7 +100,16 @@ def _run_logistic(
 def run_chi_square(
     column: str, working: pd.DataFrame, predictor_type: str
 ) -> list[dict[str, float]]:
-    """Compute chi-square association between binary predictor and target."""
+    """Compute chi-square association between binary predictor and target.
+
+    Args:
+        column (str): The name of the predictor column.
+        working (pd.DataFrame): The dataframe containing the working data.
+        predictor_type (str): The type of the predictor.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the chi-square results.
+    """
 
     contingency = pd.crosstab(working["predictor"], working["target"])
     if contingency.shape[0] <= 1 or contingency.shape[1] <= 1:

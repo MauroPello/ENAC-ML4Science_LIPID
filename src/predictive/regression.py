@@ -25,7 +25,18 @@ def run_regression_models(
     random_state: int = 42,
     cv: int = 5,
 ) -> Dict[str, object]:
-    """Train baseline regressors using k-fold CV grid search and return evaluation artefacts."""
+    """Train baseline regressors using k-fold CV grid search and return evaluation artefacts.
+
+    Args:
+        X (pd.DataFrame): Feature matrix.
+        y (pd.Series): Target vector.
+        test_size (float): Proportion of dataset to include in the test split.
+        random_state (int): Random state for reproducibility.
+        cv (int): Number of folds for cross-validation.
+
+    Returns:
+        Dict[str, object]: A dictionary containing regression results and artifacts.
+    """
 
     y_numeric = pd.to_numeric(y, errors="coerce")
     valid_mask = y_numeric.notna()
@@ -139,6 +150,14 @@ def run_regression_models(
 
 
 def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
+    """Build a list of regression models to evaluate.
+
+    Args:
+        random_state (int): Random state for reproducibility.
+
+    Returns:
+        List[tuple[str, Pipeline]]: A list of (name, pipeline) tuples.
+    """
     return [
         ("Linear Regression", Pipeline(steps=[("model", LinearRegression())])),
         (
@@ -202,6 +221,16 @@ def _collect_regression_metrics(
     y_test: pd.Series,
     y_pred: np.ndarray,
 ) -> Dict[str, float]:
+    """Collect evaluation metrics for regression.
+
+    Args:
+        name (str): The name of the model.
+        y_test (pd.Series): True target values for the test set.
+        y_pred (np.ndarray): Predicted target values for the test set.
+
+    Returns:
+        Dict[str, float]: A dictionary containing the evaluation metrics.
+    """
     rmse = float(np.sqrt(mean_squared_error(y_test, y_pred)))
     mae = float(mean_absolute_error(y_test, y_pred))
     r2 = float(r2_score(y_test, y_pred))
@@ -213,6 +242,12 @@ def _get_refined_regression_grid(
 ) -> dict:
     """
     Get the hyperparameter grid to refine the model further, given the previous best params.
+
+    Args:
+        best_params (dict): Dictionary of best parameters found in the initial search.
+
+    Returns:
+        dict: A refined hyperparameter grid for the next search.
     """
     refined_grid = {}
 

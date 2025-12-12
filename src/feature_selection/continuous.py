@@ -10,7 +10,16 @@ def evaluate_continuous_target(
     target_feature: str,
     feature_types: dict[str, str],
 ) -> list[dict[str, float]]:
-    """Run simple univariate checks for a continuous target."""
+    """Run simple univariate checks for a continuous target.
+
+    Args:
+        df (pd.DataFrame): The dataframe containing the data.
+        target_feature (str): The name of the target feature column.
+        feature_types (dict[str, str]): A dictionary mapping feature names to their types.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the association metrics.
+    """
 
     association_records: list[dict[str, float]] = []
     numeric_target = pd.to_numeric(df[target_feature], errors="coerce")
@@ -46,7 +55,15 @@ def evaluate_continuous_target(
 def _run_continuous_correlations(
     column: str, working: pd.DataFrame
 ) -> list[dict[str, float]]:
-    """Compute Pearson and Spearman correlations for continuous predictors."""
+    """Compute Pearson and Spearman correlations for continuous predictors.
+
+    Args:
+        column (str): The name of the predictor column.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the correlation results.
+    """
 
     cleaned = working.copy()
     cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
@@ -82,7 +99,15 @@ def _run_continuous_correlations(
 
 
 def _run_point_biserial(column: str, working: pd.DataFrame) -> list[dict[str, float]]:
-    """Compute point-biserial correlation for binary predictors."""
+    """Compute point-biserial correlation for binary predictors.
+
+    Args:
+        column (str): The name of the predictor column.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the point-biserial correlation results.
+    """
 
     cleaned = working.copy()
     cleaned["predictor"] = pd.to_numeric(cleaned["predictor"], errors="coerce")
@@ -104,7 +129,15 @@ def _run_point_biserial(column: str, working: pd.DataFrame) -> list[dict[str, fl
 
 
 def run_anova(column: str, working: pd.DataFrame) -> list[dict[str, float]]:
-    """ANOVA for categorical predictors with continuous target."""
+    """ANOVA for categorical predictors with continuous target.
+
+    Args:
+        column (str): The name of the predictor column.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the ANOVA results.
+    """
 
     groups = []
     for _, group in working.dropna(subset=["predictor"]).groupby(
@@ -133,7 +166,16 @@ def run_anova(column: str, working: pd.DataFrame) -> list[dict[str, float]]:
 def _run_linear_regression(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> list[dict[str, float]]:
-    """Run univariate OLS on the predictor representation."""
+    """Run univariate OLS on the predictor representation.
+
+    Args:
+        column (str): The name of the predictor column.
+        predictor_type (str): The type of the predictor.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        list[dict[str, float]]: A list of dictionaries containing the logistic regression results.
+    """
 
     regression_features = _build_regression_features(column, predictor_type, working)
     if regression_features.empty:
@@ -174,7 +216,16 @@ def _run_linear_regression(
 def _build_regression_features(
     column: str, predictor_type: str, working: pd.DataFrame
 ) -> pd.DataFrame:
-    """Prepare numeric or one-hot encoded predictor for regression."""
+    """Prepare numeric or one-hot encoded predictor for regression.
+
+    Args:
+        column (str): The name of the predictor column.
+        predictor_type (str): The type of the predictor.
+        working (pd.DataFrame): The dataframe containing the working data.
+
+    Returns:
+        pd.DataFrame: A dataframe containing the prepared predictor features.
+    """
 
     if predictor_type == "categorical":
         return pd.get_dummies(working["predictor"], prefix=column, drop_first=True)

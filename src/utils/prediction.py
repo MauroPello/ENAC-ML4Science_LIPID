@@ -11,6 +11,18 @@ def collect_coefficients(
     y_train: np.ndarray,
     random_state: int,
 ) -> list[dict[str, float]]:
+    """Collect feature coefficients or importance scores from a model.
+
+    Args:
+        name (str): Name of the model.
+        model (Pipeline): Trained model pipeline.
+        X_train (pd.DataFrame): Training feature matrix.
+        y_train (np.ndarray): Training target vector.
+        random_state (int): Random state for reproducibility.
+
+    Returns:
+        list[dict[str, float]]: List of dictionaries containing feature importance/coefficent info.
+    """
     final_estimator = model.named_steps.get("model", model)
 
     if hasattr(final_estimator, "coef_"):
