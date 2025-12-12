@@ -1,7 +1,4 @@
 
-# The data folder, containing the dataset
-data/*
-
 # Cache files
 __pycache__
 .DS_Store
