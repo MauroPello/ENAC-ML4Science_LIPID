@@ -173,17 +173,6 @@ def assign_age_bins(
     return df
 
 
-def assign_age_quantile_bins(
-    df: pd.DataFrame,
-    age_column: str = "age",
-    output_column: str = "age_bin",
-    max_bins: int = 4,
-) -> pd.DataFrame:
-    """Backward-compatible wrapper that now delegates to fixed age bins."""
-
-    return assign_age_bins(df, age_column=age_column, output_column=output_column)
-
-
 def drop_extra_features(
     df: pd.DataFrame,
     excluded_targets: Iterable[str] = (),
