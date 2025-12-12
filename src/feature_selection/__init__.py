@@ -66,9 +66,15 @@ def compute_vif(
     vif_records: list[dict[str, float]] = []
     for index, column in enumerate(frame.columns, start=1):
         try:
-            value = variance_inflation_factor(design.values, index)
+            # Guard against perfect multicollinearity that triggers divide-by-zero warnings
+            with np.errstate(divide="ignore", invalid="ignore"):
+                value = variance_inflation_factor(design.values, index)
         except Exception:
             continue
+
+        # Keep explicit inf to signal unmanageable collinearity while avoiding runtime warnings
+        if not np.isfinite(value):
+            value = np.inf
         vif_records.append(
             {
                 "predictor": column,
