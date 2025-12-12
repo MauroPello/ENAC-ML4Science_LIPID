@@ -106,7 +106,7 @@ def run_regression_models(
         # compute evaluation metrics
         metrics = _collect_regression_metrics(name, y_test, y_pred)
         metrics["best_params"] = gs.best_params_
-        
+
         regression_records.append(metrics)
 
         # collect coefficients if available

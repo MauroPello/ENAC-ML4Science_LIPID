@@ -186,7 +186,7 @@ def run_classification_models(
         metrics = _collect_classification_metrics(best, y_test, y_pred, X_test)
         metrics["model"] = name
         metrics["best_params"] = gs.best_params_
-        
+
         classification_records.append(metrics)
 
         coefficient_records.extend(
@@ -228,6 +228,12 @@ def run_classification_models(
     }
 
 
+def _collect_classification_metrics(
+    model: Pipeline,
+    y_test: np.ndarray,
+    y_pred: np.ndarray,
+    X_test: pd.DataFrame,
+) -> Dict[str, float]:
     """Collect evaluation metrics for classification.
 
     Args:

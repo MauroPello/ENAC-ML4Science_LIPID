@@ -109,8 +109,12 @@ def compute_categorical_associations(
             if records:
                 anova_rows.extend(records)
         if anova_rows:
-            return pd.DataFrame(anova_rows).sort_values("p_value").reset_index(drop=True)
-        print("No categorical features available for ANOVA against the continuous target.")
+            return (
+                pd.DataFrame(anova_rows).sort_values("p_value").reset_index(drop=True)
+            )
+        print(
+            "No categorical features available for ANOVA against the continuous target."
+        )
 
     elif feature_types["target"] == "binary":
         chi_rows = []
@@ -126,8 +130,12 @@ def compute_categorical_associations(
                 chi_rows.extend(records)
         if chi_rows:
             return pd.DataFrame(chi_rows).sort_values("p_value").reset_index(drop=True)
-        print("No categorical features available for chi-square tests against the binary target.")
-    
+        print(
+            "No categorical features available for chi-square tests against the binary target."
+        )
+
     else:
-        print(f"Association tests are only defined for continuous or binary targets (got '{feature_types['target']}').")
+        print(
+            f"Association tests are only defined for continuous or binary targets (got '{feature_types['target']}')."
+        )
     return pd.DataFrame()
