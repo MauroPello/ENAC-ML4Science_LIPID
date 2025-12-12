@@ -59,11 +59,11 @@ def encode_ordinal_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    income_map = {"Low": 0, "Medium": 1, "High": 2}
+    income_map = {"<50k": 0, "50–100k": 1, "100–150k": 2, ">150k": 3}
     if "income" in df.columns:
         df["income"] = df["income"].map(income_map)
 
-    education_map = {"High School": 0, "Bachelor": 1, "Master": 2, "PhD": 3}
+    education_map = {"primary": 0, "secondary": 1, "tertiary": 2}
     if "education_level" in df.columns:
         df["education_level"] = df["education_level"].map(education_map)
 
@@ -101,7 +101,7 @@ def process_additional_features(df: pd.DataFrame) -> pd.DataFrame:
         df["bedtime_hour"] = temp_dt.dt.hour + (temp_dt.dt.minute / 60.0)
 
     if "sex" in df.columns:
-        df["sex"] = df["sex"].map({"Male": 0, "Female": 1})
+        df["sex"] = df["sex"].map({"M": 0, "F": 1})
 
     return df
 
