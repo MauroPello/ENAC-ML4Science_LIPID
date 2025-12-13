@@ -11,6 +11,7 @@ from src.feature_config import (
     ALL_CONTINUOUS_FEATURES,
     EXPECTED_HOURS,
     POSSIBLE_TARGET_FEATURES,
+    SOCIO_DEMOGRAPHIC_VALUES,
 )
 
 
@@ -60,28 +61,17 @@ def encode_ordinal_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    income_map = {"<50k": 0, "50–100k": 1, "100–150k": 2, ">150k": 3}
+    income_map = {income: i for i, income in enumerate(SOCIO_DEMOGRAPHIC_VALUES["income"])}
     if "income" in df.columns:
         df["income"] = df["income"].map(income_map)
 
-    education_map = {"primary": 0, "secondary": 1, "tertiary": 2}
+    education_map = {education: i for i, education in enumerate(SOCIO_DEMOGRAPHIC_VALUES["education_level"])}
     if "education_level" in df.columns:
         df["education_level"] = df["education_level"].map(education_map)
 
+    age_bin_map = {age_bin: i for i, age_bin in enumerate(SOCIO_DEMOGRAPHIC_VALUES["age_bin"])}
     if "age_bin" in df.columns:
-        categories = df["age_bin"].dropna().unique()
-
-        def get_sort_key(label):
-            if str(label).startswith("<"):
-                return float("-inf")
-            numbers = re.findall(r"\d+", str(label))
-            if not numbers:
-                return float("inf")
-            return int(numbers[0])
-
-        sorted_cats = sorted(categories, key=get_sort_key)
-        age_quantiles_map = {cat: i for i, cat in enumerate(sorted_cats)}
-        df["age_bin"] = df["age_bin"].map(age_quantiles_map)
+        df["age_bin"] = df["age_bin"].map(age_bin_map)
 
     return df
 
@@ -101,8 +91,9 @@ def process_additional_features(df: pd.DataFrame) -> pd.DataFrame:
         temp_dt = pd.to_datetime(df["bedtime_hour"], format="%H:%M", errors="coerce")
         df["bedtime_hour"] = temp_dt.dt.hour + (temp_dt.dt.minute / 60.0)
 
+    sex_map = {sex: i for i, sex in enumerate(SOCIO_DEMOGRAPHIC_VALUES["sex"])}
     if "sex" in df.columns:
-        df["sex"] = df["sex"].map({"M": 0, "F": 1})
+        df["sex"] = df["sex"].map(sex_map)
 
     return df
 
