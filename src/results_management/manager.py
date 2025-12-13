@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -88,6 +89,18 @@ class ResultsManager:
                 if isinstance(cm, pd.DataFrame) and not cm.empty:
                     cm.to_csv(cm_dir / f"{name.replace(' ', '_')}.csv")
 
+        # Save trained models
+        if best_model := results.get("best_model"):
+            try:
+                joblib.dump(best_model, exp_dir / "best_model.joblib")
+            except Exception as e:
+                print(f"Warning: Could not save model: {e}")
+        if best_fitted := results.get("best_model_fitted"):
+            try:
+                joblib.dump(best_fitted, exp_dir / "best_model_fitted.joblib")
+            except Exception as e:
+                print(f"Warning: Could not save fitted model: {e}")
+
         print(f"Saved to {exp_dir}")
         return exp_dir
 
@@ -131,6 +144,18 @@ class ResultsManager:
                 p.stem.replace("_", " "): pd.read_csv(p, index_col=0)
                 for p in cm_dir.glob("*.csv")
             }
+
+        # Load trained models
+        if (model_path := exp_dir / "best_model.joblib").exists():
+            try:
+                results["best_model"] = joblib.load(model_path)
+            except Exception as e:
+                print(f"Warning: Could not load model: {e}")
+        if (fitted_path := exp_dir / "best_model_fitted.joblib").exists():
+            try:
+                results["best_model_fitted"] = joblib.load(fitted_path)
+            except Exception as e:
+                print(f"Warning: Could not load fitted model: {e}")
 
         return results
 

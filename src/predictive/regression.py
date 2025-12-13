@@ -37,18 +37,28 @@ def run_regression_models(
     Returns:
         Dict[str, object]: A dictionary containing regression results and artifacts.
     """
-
+    # 1. Clean Target
     y_numeric = pd.to_numeric(y, errors="coerce")
     valid_mask = y_numeric.notna()
     X_reg = X.loc[valid_mask]
     y_reg = y_numeric.loc[valid_mask]
+    
     if X_reg.empty:
-        raise ValueError(
-            "No valid rows remain for regression modeling after numeric coercion."
-        )
+        raise ValueError("No valid rows remain for regression modeling after numeric coercion.")
+
+    stratify_labels = None
+    try:
+        stratify_labels = pd.qcut(y_reg, q=5, labels=False, duplicates="drop")
+    except ValueError:
+        print("Warning: Could not create stratified bins for regression split. Using random split.")
+        stratify_labels = None
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X_reg, y_reg, test_size=test_size, random_state=random_state
+        X_reg, 
+        y_reg, 
+        test_size=test_size, 
+        random_state=random_state,
+        stratify=stratify_labels 
     )
 
     models: List[tuple[str, Pipeline]] = _build_regression_models(random_state)
@@ -103,13 +113,11 @@ def run_regression_models(
         except Exception:
             continue
 
-        # compute evaluation metrics
         metrics = _collect_regression_metrics(name, y_test, y_pred)
         metrics["best_params"] = gs.best_params_
 
         regression_records.append(metrics)
 
-        # collect coefficients if available
         coefficient_records.extend(
             collect_coefficients(name, best, X_train, y_train, random_state)
         )
@@ -221,16 +229,7 @@ def _collect_regression_metrics(
     y_test: pd.Series,
     y_pred: np.ndarray,
 ) -> Dict[str, float]:
-    """Collect evaluation metrics for regression.
-
-    Args:
-        name (str): The name of the model.
-        y_test (pd.Series): True target values for the test set.
-        y_pred (np.ndarray): Predicted target values for the test set.
-
-    Returns:
-        Dict[str, float]: A dictionary containing the evaluation metrics.
-    """
+    """Collect evaluation metrics for regression."""
     rmse = float(np.sqrt(mean_squared_error(y_test, y_pred)))
     mae = float(mean_absolute_error(y_test, y_pred))
     r2 = float(r2_score(y_test, y_pred))
@@ -240,15 +239,7 @@ def _collect_regression_metrics(
 def _get_refined_regression_grid(
     best_params: dict,
 ) -> dict:
-    """
-    Get the hyperparameter grid to refine the model further, given the previous best params.
-
-    Args:
-        best_params (dict): Dictionary of best parameters found in the initial search.
-
-    Returns:
-        dict: A refined hyperparameter grid for the next search.
-    """
+    """Get the hyperparameter grid to refine the model further."""
     refined_grid = {}
 
     for param_name, best_value in best_params.items():
@@ -278,7 +269,6 @@ def _get_refined_regression_grid(
                 base + 20,
             ]
         elif param_name == "model__max_depth":
-            # None is a valid value for max_depth, it is handled separately
             if best_value is None:
                 refined_grid[param_name] = [None]
             else:

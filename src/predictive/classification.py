@@ -1,7 +1,7 @@
 """Classification modeling helpers for binary targets."""
 
 import math
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
 
+try:
+    from imblearn.pipeline import Pipeline as ImbPipeline
+except ImportError:
+    ImbPipeline = Pipeline
+
 from src.utils.prediction import collect_coefficients
 
 
@@ -31,6 +36,7 @@ def run_classification_models(
     test_size: float = 0.2,
     random_state: int = 42,
     cv: int = 5,
+    imbalance_strategy: str = "class_weight",
 ) -> Dict[str, object]:
     """Train baseline classifiers with k-fold CV grid search and return evaluation artefacts.
 
@@ -42,6 +48,8 @@ def run_classification_models(
         test_size (float): Proportion of dataset to include in the test split.
         random_state (int): Random state for reproducibility.
         cv (int): Number of folds for cross-validation.
+        imbalance_strategy (str): Strategy for class imbalance. Options:
+            "none", "class_weight" (default), "smote", "oversample", "undersample".
 
     Returns:
         Dict[str, object]: A dictionary containing classification results and artifacts.
@@ -58,77 +66,89 @@ def run_classification_models(
         random_state=random_state,
         stratify=y_encoded,
     )
+    
+    sampler = None
+    if imbalance_strategy in ("smote", "oversample", "undersample"):
+        try:
+            if imbalance_strategy == "smote":
+                from imblearn.over_sampling import SMOTE
+                sampler = SMOTE(random_state=random_state)
+            elif imbalance_strategy == "oversample":
+                from imblearn.over_sampling import RandomOverSampler
+                sampler = RandomOverSampler(random_state=random_state)
+            elif imbalance_strategy == "undersample":
+                from imblearn.under_sampling import RandomUnderSampler
+                sampler = RandomUnderSampler(random_state=random_state)
+        except ImportError:
+            print(f"Warning: imblearn required for '{imbalance_strategy}'. Using class_weight instead.")
+            imbalance_strategy = "class_weight"
+
+    class_weight = "balanced" if imbalance_strategy == "class_weight" else None
+
+    def create_pipeline(steps: List[Any]) -> Pipeline:
+        if sampler:
+            steps.insert(len(steps) - 1, ("sampler", sampler))
+            return ImbPipeline(steps)
+        return Pipeline(steps)
 
     models: List[tuple[str, Pipeline]] = [
         (
             "Logistic Regression (Ridge)",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(penalty="l2", solver="lbfgs", max_iter=5000),
+                        LogisticRegression(penalty="l2", solver="lbfgs", max_iter=10000, tol=1e-2, class_weight=class_weight),
                     ),
-                ]
-            ),
+            ]),
         ),
         (
             "Logistic Regression (Lasso)",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(penalty="l1", solver="saga", max_iter=5000),
+                        LogisticRegression(penalty="l1", solver="saga", max_iter=10000, tol=1e-2, class_weight=class_weight),
                     ),
-                ]
-            ),
+            ]),
         ),
         (
             "Random Forest Classifier",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     (
                         "model",
-                        RandomForestClassifier(random_state=random_state),
+                        RandomForestClassifier(random_state=random_state, class_weight=class_weight),
                     )
-                ]
-            ),
+            ]),
         ),
         (
             "SVM (Linear)",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     ("scaler", StandardScaler()),
                     (
                         "model",
                         SVC(
-                            kernel="linear", probability=True, random_state=random_state
+                            kernel="linear", probability=True, random_state=random_state, class_weight=class_weight
                         ),
                     ),
-                ]
-            ),
+            ]),
         ),
         (
             "SVM (RBF)",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        SVC(kernel="rbf", probability=True, random_state=random_state),
+                        SVC(kernel="rbf", probability=True, random_state=random_state, class_weight=class_weight),
                     ),
-                ]
-            ),
+            ]),
         ),
         (
             "k-NN Classifier",
-            Pipeline(
-                steps=[
+            create_pipeline([
                     ("scaler", StandardScaler()),
                     ("model", KNeighborsClassifier()),
-                ]
-            ),
+            ]),
         ),
     ]
 
@@ -188,7 +208,6 @@ def run_classification_models(
         metrics["best_params"] = gs.best_params_
 
         classification_records.append(metrics)
-
         coefficient_records.extend(
             collect_coefficients(name, best, X_train, y_train, random_state)
         )
