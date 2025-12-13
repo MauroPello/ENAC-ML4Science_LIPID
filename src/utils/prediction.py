@@ -11,6 +11,7 @@ from src.feature_config import SOCIO_DEMOGRAPHIC_VALUES
 from src.utils.pipeline import (
     drop_extra_features,
     encode_ordinal_features,
+    ohe_features,
     process_additional_features,
 )
 
@@ -123,27 +124,18 @@ def _preprocess_for_inference(df: pd.DataFrame) -> pd.DataFrame:
 def _align_feature_space(
     df: pd.DataFrame,
     expected_features: list[str],
+    feature_types: dict[str, str],
 ) -> pd.DataFrame:
-    """Ensure the dataframe matches the training feature space, including typology dummies."""
+    """Align inference dataframe to the training feature space using shared OHE logic."""
 
-    df = df.copy()
-    expected_typology_cols = [c for c in expected_features if c.startswith("typology_")]
-
-    if expected_typology_cols:
-        dummies = pd.get_dummies(df["typology"], prefix="typology")
-        for col in expected_typology_cols:
-            df[col] = dummies.get(col, 0)
-
-        df = df.drop(columns=["typology"])
-    else:
-        df = df.drop(columns=["typology"], errors="ignore")
+    encoded, _ = ohe_features(df, feature_types)
 
     for col in expected_features:
-        if col not in df.columns:
-            df[col] = 0
+        if col not in encoded.columns:
+            encoded[col] = 0
 
-    df = df[[col for col in expected_features]]
-    return df
+    encoded = encoded[[col for col in expected_features]]
+    return encoded
 
 
 def infer_neighborhood_health_risks(
@@ -190,7 +182,11 @@ def infer_neighborhood_health_risks(
         target_type = feature_types.get("target", "binary")
         expected_features = [name for name in feature_types.keys() if name != "target"]
 
-        aligned = _align_feature_space(processed, expected_features=expected_features)
+        aligned = _align_feature_space(
+            processed,
+            expected_features=expected_features,
+            feature_types=feature_types,
+        )
 
         scores = _predict_scores(model, aligned, target_type=target_type)
         scores = np.clip(scores, 0.0, 1.0)

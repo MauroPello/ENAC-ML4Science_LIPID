@@ -219,11 +219,10 @@ def summarize_continuous_stats(
 
 def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
     """
-    One-hot encode the 'typology' feature using sklearn (the only truly categorical feature left).
+    One-hot encode categorical features using sklearn.
 
-    Creates binary columns for each category in 'typology' and removes
-    the original column. Returns the dataframe unchanged if 'typology'
-    is missing.
+    Creates binary columns for each category and removes the original columns.
+    Returns the dataframe unchanged if there are no categorical features.
 
     Args:
         df (pd.DataFrame): Input dataframe.
@@ -233,21 +232,24 @@ def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
         Tuple[pd.DataFrame, dict]: Tuple containing the dataframe with OHE features and the updated feature types.
     """
     df = df.copy()
-    if "typology" not in df.columns:
-        return df, feature_types
-
-    encoder = OneHotEncoder(sparse_output=False, dtype=int, handle_unknown="ignore")
-    encoded_array = encoder.fit_transform(df[["typology"]])
-    feature_names = encoder.get_feature_names_out(["typology"])
-
-    encoded_df = pd.DataFrame(encoded_array, columns=feature_names, index=df.index)
-    df = pd.concat([df, encoded_df], axis=1)
-    df = df.drop(columns=["typology"])
-
     feature_types = feature_types.copy()
-    feature_types.pop("typology")
-    for feature in feature_names:
-        feature_types[feature] = "binary"
+
+    for column in ALL_CATEGORICAL_FEATURES:
+        if column not in df.columns:
+            continue
+
+        encoder = OneHotEncoder(sparse_output=False, dtype=int, handle_unknown="ignore")
+        encoded_array = encoder.fit_transform(df[[column]])
+        feature_names = encoder.get_feature_names_out([column])
+
+        encoded_df = pd.DataFrame(encoded_array, columns=feature_names, index=df.index)
+        df = pd.concat([df, encoded_df], axis=1)
+        df = df.drop(columns=[column])
+
+        if column in feature_types.keys():
+            feature_types.pop(column)
+            for feature in feature_names:
+                feature_types[feature] = "binary"
 
     return df, feature_types
 
