@@ -61,15 +61,22 @@ def encode_ordinal_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    income_map = {income: i for i, income in enumerate(SOCIO_DEMOGRAPHIC_VALUES["income"])}
+    income_map = {
+        income: i for i, income in enumerate(SOCIO_DEMOGRAPHIC_VALUES["income"])
+    }
     if "income" in df.columns:
         df["income"] = df["income"].map(income_map)
 
-    education_map = {education: i for i, education in enumerate(SOCIO_DEMOGRAPHIC_VALUES["education_level"])}
+    education_map = {
+        education: i
+        for i, education in enumerate(SOCIO_DEMOGRAPHIC_VALUES["education_level"])
+    }
     if "education_level" in df.columns:
         df["education_level"] = df["education_level"].map(education_map)
 
-    age_bin_map = {age_bin: i for i, age_bin in enumerate(SOCIO_DEMOGRAPHIC_VALUES["age_bin"])}
+    age_bin_map = {
+        age_bin: i for i, age_bin in enumerate(SOCIO_DEMOGRAPHIC_VALUES["age_bin"])
+    }
     if "age_bin" in df.columns:
         df["age_bin"] = df["age_bin"].map(age_bin_map)
 

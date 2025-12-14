@@ -54,14 +54,21 @@ def run_modeling_suite(
         strategy = imbalance_strategy or "sample_weight"
         results.update(
             run_regression_models(
-                X, y, test_size=test_size, random_state=random_state,
+                X,
+                y,
+                test_size=test_size,
+                random_state=random_state,
             )
         )
     elif target_type == "binary":
         strategy = imbalance_strategy or "class_weight"
         results.update(
             run_classification_models(
-                X, y, test_size=test_size, random_state=random_state, imbalance_strategy=strategy,
+                X,
+                y,
+                test_size=test_size,
+                random_state=random_state,
+                imbalance_strategy=strategy,
             )
         )
     else:

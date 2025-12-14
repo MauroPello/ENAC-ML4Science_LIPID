@@ -46,7 +46,9 @@ def run_regression_models(
     y_reg = y_numeric.loc[valid_mask]
 
     if X_reg.empty:
-        raise ValueError("No valid rows remain for regression modeling after numeric coercion.")
+        raise ValueError(
+            "No valid rows remain for regression modeling after numeric coercion."
+        )
 
     n_samples = len(y_reg)
     y_reg = (y_reg * (n_samples - 1) + 0.5) / n_samples
@@ -55,7 +57,9 @@ def run_regression_models(
     try:
         stratify_labels = pd.qcut(y_reg, q=5, labels=False, duplicates="drop")
     except ValueError:
-        print("Warning: Could not create stratified bins. Using random split.")
+        print(
+            "Warning: Could not create stratified bins for regression split. Using random split."
+        )
         stratify_labels = None
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -63,7 +67,7 @@ def run_regression_models(
         y_reg,
         test_size=test_size,
         random_state=random_state,
-        stratify=stratify_labels
+        stratify=stratify_labels,
     )
 
     # Note: Models are now wrapped in TransformedTargetRegressor

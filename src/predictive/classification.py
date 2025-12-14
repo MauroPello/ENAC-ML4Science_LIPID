@@ -66,21 +66,26 @@ def run_classification_models(
         random_state=random_state,
         stratify=y_encoded,
     )
-    
+
     sampler = None
     if imbalance_strategy in ("smote", "oversample", "undersample"):
         try:
             if imbalance_strategy == "smote":
                 from imblearn.over_sampling import SMOTE
+
                 sampler = SMOTE(random_state=random_state)
             elif imbalance_strategy == "oversample":
                 from imblearn.over_sampling import RandomOverSampler
+
                 sampler = RandomOverSampler(random_state=random_state)
             elif imbalance_strategy == "undersample":
                 from imblearn.under_sampling import RandomUnderSampler
+
                 sampler = RandomUnderSampler(random_state=random_state)
         except ImportError:
-            print(f"Warning: imblearn required for '{imbalance_strategy}'. Using class_weight instead.")
+            print(
+                f"Warning: imblearn required for '{imbalance_strategy}'. Using class_weight instead."
+            )
             imbalance_strategy = "class_weight"
 
     class_weight = "balanced" if imbalance_strategy == "class_weight" else None
@@ -94,61 +99,95 @@ def run_classification_models(
     models: List[tuple[str, Pipeline]] = [
         (
             "Logistic Regression (Ridge)",
-            create_pipeline([
+            create_pipeline(
+                [
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(penalty="l2", solver="lbfgs", max_iter=10000, tol=1e-2, class_weight=class_weight),
+                        LogisticRegression(
+                            penalty="l2",
+                            solver="lbfgs",
+                            max_iter=10000,
+                            tol=1e-2,
+                            class_weight=class_weight,
+                        ),
                     ),
-            ]),
+                ]
+            ),
         ),
         (
             "Logistic Regression (Lasso)",
-            create_pipeline([
+            create_pipeline(
+                [
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(penalty="l1", solver="saga", max_iter=10000, tol=1e-2, class_weight=class_weight),
+                        LogisticRegression(
+                            penalty="l1",
+                            solver="saga",
+                            max_iter=10000,
+                            tol=1e-2,
+                            class_weight=class_weight,
+                        ),
                     ),
-            ]),
+                ]
+            ),
         ),
         (
             "Random Forest Classifier",
-            create_pipeline([
+            create_pipeline(
+                [
                     (
                         "model",
-                        RandomForestClassifier(random_state=random_state, class_weight=class_weight),
+                        RandomForestClassifier(
+                            random_state=random_state, class_weight=class_weight
+                        ),
                     )
-            ]),
+                ]
+            ),
         ),
         (
             "SVM (Linear)",
-            create_pipeline([
+            create_pipeline(
+                [
                     ("scaler", StandardScaler()),
                     (
                         "model",
                         SVC(
-                            kernel="linear", probability=True, random_state=random_state, class_weight=class_weight
+                            kernel="linear",
+                            probability=True,
+                            random_state=random_state,
+                            class_weight=class_weight,
                         ),
                     ),
-            ]),
+                ]
+            ),
         ),
         (
             "SVM (RBF)",
-            create_pipeline([
+            create_pipeline(
+                [
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        SVC(kernel="rbf", probability=True, random_state=random_state, class_weight=class_weight),
+                        SVC(
+                            kernel="rbf",
+                            probability=True,
+                            random_state=random_state,
+                            class_weight=class_weight,
+                        ),
                     ),
-            ]),
+                ]
+            ),
         ),
         (
             "k-NN Classifier",
-            create_pipeline([
+            create_pipeline(
+                [
                     ("scaler", StandardScaler()),
                     ("model", KNeighborsClassifier()),
-            ]),
+                ]
+            ),
         ),
     ]
 
