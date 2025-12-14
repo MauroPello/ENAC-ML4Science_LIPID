@@ -1,9 +1,11 @@
-"""Regression modeling helpers for continuous targets."""
+"""Regression modeling helpers for continuous targets within a 0-1 constrained domain."""
 
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from scipy.special import expit, logit
+from sklearn.compose import TransformedTargetRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import Lasso, LinearRegression, Ridge
@@ -25,11 +27,11 @@ def run_regression_models(
     random_state: int = 42,
     cv: int = 5,
 ) -> Dict[str, object]:
-    """Train baseline regressors using k-fold CV grid search and return evaluation artefacts.
+    """Train constrained (0-1) regressors using k-fold CV grid search.
 
     Args:
         X (pd.DataFrame): Feature matrix.
-        y (pd.Series): Target vector.
+        y (pd.Series): Target vector (values must be in 0-1).
         test_size (float): Proportion of dataset to include in the test split.
         random_state (int): Random state for reproducibility.
         cv (int): Number of folds for cross-validation.
@@ -42,54 +44,60 @@ def run_regression_models(
     valid_mask = y_numeric.notna()
     X_reg = X.loc[valid_mask]
     y_reg = y_numeric.loc[valid_mask]
-    
+
     if X_reg.empty:
         raise ValueError("No valid rows remain for regression modeling after numeric coercion.")
+
+    n_samples = len(y_reg)
+    y_reg = (y_reg * (n_samples - 1) + 0.5) / n_samples
 
     stratify_labels = None
     try:
         stratify_labels = pd.qcut(y_reg, q=5, labels=False, duplicates="drop")
     except ValueError:
-        print("Warning: Could not create stratified bins for regression split. Using random split.")
+        print("Warning: Could not create stratified bins. Using random split.")
         stratify_labels = None
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X_reg, 
-        y_reg, 
-        test_size=test_size, 
+        X_reg,
+        y_reg,
+        test_size=test_size,
         random_state=random_state,
-        stratify=stratify_labels 
+        stratify=stratify_labels
     )
 
-    models: List[tuple[str, Pipeline]] = _build_regression_models(random_state)
+    # Note: Models are now wrapped in TransformedTargetRegressor
+    models: List[tuple[str, TransformedTargetRegressor]] = _build_regression_models(random_state)
 
-    # Parameter grids keyed by model name
     param_grids = {
         "Linear Regression": {},
-        "Ridge Regression": {"model__alpha": [0.1, 1.0, 10.0]},
-        "Lasso Regression": {"model__alpha": [1e-4, 1e-3, 1e-2]},
-        "Kernel Ridge": {"model__alpha": [0.1, 1.0, 10.0]},
+        "Ridge Regression": {"regressor__model__alpha": [0.1, 1.0, 10.0]},
+        "Lasso Regression": {"regressor__model__alpha": [1e-4, 1e-3, 1e-2]},
+        "Kernel Ridge": {"regressor__model__alpha": [0.1, 1.0, 10.0]},
         "Random Forest Regressor": {
-            "model__n_estimators": [100, 300],
-            "model__max_depth": [None, 10, 20],
+            "regressor__model__n_estimators": [100, 300],
+            "regressor__model__max_depth": [None, 10, 20],
         },
-        "SVR (RBF)": {"model__C": [0.1, 1.0, 10.0], "model__gamma": ["scale", "auto"]},
-        "k-NN Regressor": {"model__n_neighbors": [3, 5, 7]},
+        "SVR (RBF)": {
+            "regressor__model__C": [0.1, 1.0, 10.0],
+            "regressor__model__gamma": ["scale", "auto"],
+        },
+        "k-NN Regressor": {"regressor__model__n_neighbors": [3, 5, 7]},
     }
 
     regression_records: List[Dict[str, float]] = []
     coefficient_records: List[Dict[str, float]] = []
     residual_payload: Dict[str, Dict[str, np.ndarray]] = {}
-    best_estimators: Dict[str, Pipeline] = {}
+    best_estimators: Dict[str, object] = {}
     best_params_map: Dict[str, dict] = {}
 
     cv_strategy = KFold(n_splits=cv, shuffle=True, random_state=random_state)
 
-    for name, pipeline in models:
+    for name, model_wrapper in models:
         grid = param_grids.get(name, {})
         try:
             gs = GridSearchCV(
-                pipeline,
+                model_wrapper,
                 grid,
                 cv=cv_strategy,
                 scoring="neg_mean_squared_error",
@@ -98,19 +106,21 @@ def run_regression_models(
             )
             gs.fit(X_train, y_train)
 
+            # Refine Grid
             refined_grid = _get_refined_regression_grid(gs.best_params_)
             gs = GridSearchCV(
-                pipeline,
+                model_wrapper,
                 refined_grid,
                 cv=cv_strategy,
-                scoring="neg_mean_squared_error",
+                scoring="r2",
                 n_jobs=-1,
                 error_score="raise",
             )
             gs.fit(X_train, y_train)
             best = gs.best_estimator_
             y_pred = best.predict(X_test)
-        except Exception:
+        except Exception as e:
+            print(f"Skipping {name} due to error: {e}")
             continue
 
         metrics = _collect_regression_metrics(name, y_test, y_pred)
@@ -119,7 +129,7 @@ def run_regression_models(
         regression_records.append(metrics)
 
         coefficient_records.extend(
-            collect_coefficients(name, best, X_train, y_train, random_state)
+            collect_coefficients(name, best.regressor_, X_train, y_train, random_state)
         )
 
         residual_payload[name] = {
@@ -157,68 +167,87 @@ def run_regression_models(
     }
 
 
-def _build_regression_models(random_state: int) -> List[tuple[str, Pipeline]]:
-    """Build a list of regression models to evaluate.
-
-    Args:
-        random_state (int): Random state for reproducibility.
-
-    Returns:
-        List[tuple[str, Pipeline]]: A list of (name, pipeline) tuples.
+def _build_regression_models(random_state: int) -> List[tuple[str, TransformedTargetRegressor]]:
     """
+    Build a list of regression models wrapped to enforce 0-1 constraints.
+    """
+    
+    # Helper to wrap pipelines
+    def make_constrained(pipeline):
+        return TransformedTargetRegressor(
+            regressor=pipeline,
+            func=logit,
+            inverse_func=expit
+        )
+
     return [
-        ("Linear Regression", Pipeline(steps=[("model", LinearRegression())])),
+        (
+            "Linear Regression", 
+            make_constrained(Pipeline(steps=[("model", LinearRegression())]))
+        ),
         (
             "Ridge Regression",
-            Pipeline(steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]),
+            make_constrained(
+                Pipeline(steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))])
+            ),
         ),
         (
             "Lasso Regression",
-            Pipeline(
-                steps=[
-                    ("scaler", StandardScaler()),
-                    ("model", Lasso(alpha=0.001, max_iter=10000)),
-                ]
+            make_constrained(
+                Pipeline(
+                    steps=[
+                        ("scaler", StandardScaler()),
+                        ("model", Lasso(alpha=0.001, max_iter=10000)),
+                    ]
+                )
             ),
         ),
         (
             "Kernel Ridge",
-            Pipeline(
-                steps=[
-                    ("scaler", StandardScaler()),
-                    ("model", KernelRidge(alpha=1.0, kernel="rbf")),
-                ]
+            make_constrained(
+                Pipeline(
+                    steps=[
+                        ("scaler", StandardScaler()),
+                        ("model", KernelRidge(alpha=1.0, kernel="rbf")),
+                    ]
+                )
             ),
         ),
         (
             "Random Forest Regressor",
-            Pipeline(
-                steps=[
-                    (
-                        "model",
-                        RandomForestRegressor(
-                            n_estimators=300, random_state=random_state
-                        ),
-                    )
-                ]
+            make_constrained(
+                Pipeline(
+                    steps=[
+                        (
+                            "model",
+                            RandomForestRegressor(
+                                n_estimators=300, random_state=random_state
+                            ),
+                        )
+                    ]
+                )
             ),
         ),
         (
             "SVR (RBF)",
-            Pipeline(
-                steps=[
-                    ("scaler", StandardScaler()),
-                    ("model", SVR(kernel="rbf", C=1.0, epsilon=0.1)),
-                ]
+            make_constrained(
+                Pipeline(
+                    steps=[
+                        ("scaler", StandardScaler()),
+                        ("model", SVR(kernel="rbf", C=1.0, epsilon=0.1)),
+                    ]
+                )
             ),
         ),
         (
             "k-NN Regressor",
-            Pipeline(
-                steps=[
-                    ("scaler", StandardScaler()),
-                    ("model", KNeighborsRegressor(n_neighbors=5)),
-                ]
+            make_constrained(
+                Pipeline(
+                    steps=[
+                        ("scaler", StandardScaler()),
+                        ("model", KNeighborsRegressor(n_neighbors=5)),
+                    ]
+                )
             ),
         ),
     ]
@@ -236,14 +265,16 @@ def _collect_regression_metrics(
     return {"model": name, "RMSE": rmse, "MAE": mae, "R2": r2}
 
 
-def _get_refined_regression_grid(
-    best_params: dict,
-) -> dict:
-    """Get the hyperparameter grid to refine the model further."""
+def _get_refined_regression_grid(best_params: dict) -> dict:
+    """Get the hyperparameter grid to refine the model further.
+    
+    Handles the 'regressor__' prefix introduced by TransformedTargetRegressor.
+    """
     refined_grid = {}
 
     for param_name, best_value in best_params.items():
-        if param_name == "model__alpha":
+        # Logic checks on the tail of the string
+        if param_name.endswith("model__alpha"):
             refined_grid[param_name] = [
                 best_value * 0.8,
                 best_value * 0.9,
@@ -251,7 +282,7 @@ def _get_refined_regression_grid(
                 best_value * 1.1,
                 best_value * 1.2,
             ]
-        elif param_name == "model__C":
+        elif param_name.endswith("model__C"):
             refined_grid[param_name] = [
                 best_value * 0.8,
                 best_value * 0.9,
@@ -259,7 +290,7 @@ def _get_refined_regression_grid(
                 best_value * 1.1,
                 best_value * 1.2,
             ]
-        elif param_name == "model__n_estimators":
+        elif param_name.endswith("model__n_estimators"):
             base = int(best_value)
             refined_grid[param_name] = [
                 max(50, base - 20),
@@ -268,7 +299,7 @@ def _get_refined_regression_grid(
                 base + 10,
                 base + 20,
             ]
-        elif param_name == "model__max_depth":
+        elif param_name.endswith("model__max_depth"):
             if best_value is None:
                 refined_grid[param_name] = [None]
             else:
@@ -280,7 +311,7 @@ def _get_refined_regression_grid(
                     base + 1,
                     base + 2,
                 ]
-        elif param_name == "model__gamma":
+        elif param_name.endswith("model__gamma"):
             if best_value in ["scale", "auto"]:
                 refined_grid[param_name] = [best_value]
             else:
@@ -291,7 +322,7 @@ def _get_refined_regression_grid(
                     best_value * 1.1,
                     best_value * 1.2,
                 ]
-        elif param_name == "model__n_neighbors":
+        elif param_name.endswith("model__n_neighbors"):
             base = int(best_value) // 2 * 2 + 1
             refined_grid[param_name] = [
                 max(1, base - 2),

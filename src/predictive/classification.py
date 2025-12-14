@@ -180,7 +180,7 @@ def run_classification_models(
                 pipeline,
                 grid,
                 cv=cv_strategy,
-                scoring="f1_weighted",
+                scoring="f1",
                 n_jobs=-1,
                 error_score="raise",
             )
@@ -191,7 +191,7 @@ def run_classification_models(
                 pipeline,
                 refined_grid,
                 cv=cv_strategy,
-                scoring="f1_weighted",
+                scoring="f1",
                 n_jobs=-1,
                 error_score="raise",
             )
