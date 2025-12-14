@@ -219,7 +219,7 @@ def run_classification_models(
                 pipeline,
                 grid,
                 cv=cv_strategy,
-                scoring="f1",
+                scoring="recall",
                 n_jobs=-1,
                 error_score="raise",
             )
@@ -230,7 +230,7 @@ def run_classification_models(
                 pipeline,
                 refined_grid,
                 cv=cv_strategy,
-                scoring="f1",
+                scoring="recall",
                 n_jobs=-1,
                 error_score="raise",
             )
@@ -305,10 +305,10 @@ def _collect_classification_metrics(
     """
     accuracy = float(accuracy_score(y_test, y_pred))
     precision = float(
-        precision_score(y_test, y_pred, average="weighted", zero_division=0)
+        precision_score(y_test, y_pred, average="binary", zero_division=0)
     )
-    recall = float(recall_score(y_test, y_pred, average="weighted", zero_division=0))
-    f1 = float(f1_score(y_test, y_pred, average="weighted", zero_division=0))
+    recall = float(recall_score(y_test, y_pred, average="binary", zero_division=0))
+    f1 = float(f1_score(y_test, y_pred, average="binary", zero_division=0))
 
     roc_auc = math.nan
     if len(np.unique(y_test)) == 2:
