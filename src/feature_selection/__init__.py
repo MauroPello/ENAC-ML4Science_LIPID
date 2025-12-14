@@ -8,7 +8,7 @@ from .continuous import evaluate_continuous_target, run_anova
 
 
 # Default tolerant thresholds
-DEFAULT_P_VALUE_THRESHOLD = 0.8
+DEFAULT_P_VALUE_THRESHOLD = 0.5
 DEFAULT_VIF_THRESHOLD = 50.0
 
 
