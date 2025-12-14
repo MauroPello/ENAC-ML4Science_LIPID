@@ -42,23 +42,27 @@ def run_regression_models(
     valid_mask = y_numeric.notna()
     X_reg = X.loc[valid_mask]
     y_reg = y_numeric.loc[valid_mask]
-    
+
     if X_reg.empty:
-        raise ValueError("No valid rows remain for regression modeling after numeric coercion.")
+        raise ValueError(
+            "No valid rows remain for regression modeling after numeric coercion."
+        )
 
     stratify_labels = None
     try:
         stratify_labels = pd.qcut(y_reg, q=5, labels=False, duplicates="drop")
     except ValueError:
-        print("Warning: Could not create stratified bins for regression split. Using random split.")
+        print(
+            "Warning: Could not create stratified bins for regression split. Using random split."
+        )
         stratify_labels = None
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X_reg, 
-        y_reg, 
-        test_size=test_size, 
+        X_reg,
+        y_reg,
+        test_size=test_size,
         random_state=random_state,
-        stratify=stratify_labels 
+        stratify=stratify_labels,
     )
 
     models: List[tuple[str, Pipeline]] = _build_regression_models(random_state)

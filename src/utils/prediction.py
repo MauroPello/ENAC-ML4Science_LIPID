@@ -109,6 +109,11 @@ def _expand_neighborhood_grid(
         .drop(columns="_tmp_key")
     )
 
+    # Move socio-demographic columns right after the first column without duplicating them
+    first_col = expanded.columns[0]
+    remaining = [col for col in expanded.columns[1:] if col not in socio_cols]
+    expanded = expanded[[first_col] + socio_cols + remaining]
+
     return expanded
 
 
@@ -143,7 +148,6 @@ def infer_neighborhood_health_risks(
     feature_types_map: dict[str, dict[str, str]],
     morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
     socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
-    display_columns: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Score health risks per neighborhood across socio-demographic combinations.
 
@@ -159,13 +163,6 @@ def infer_neighborhood_health_risks(
     """
 
     expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=socio_config)
-    extra_cols: list[str] = []
-    if display_columns:
-        extra_cols = [col for col in display_columns if col in expanded.columns]
-        missing = [col for col in display_columns if col not in expanded.columns]
-        if missing:
-            print(f"Columns not found in morphology data and skipped: {missing}")
-
     processed = _preprocess_for_inference(expanded)
 
     socio_cols = list(socio_config.keys())
@@ -191,8 +188,8 @@ def infer_neighborhood_health_risks(
         scores = _predict_scores(model, aligned, target_type=target_type)
         scores = np.clip(scores, 0.0, 1.0)
 
-        result = expanded[["id"] + socio_cols + extra_cols].copy()
-        result[f"risk_{health_key}"] = scores
+        result = expanded.copy()
+        result.insert(1 + len(socio_cols), f"risk_{health_key}", scores)
 
         outputs[health_key] = result
 
