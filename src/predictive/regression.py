@@ -71,7 +71,9 @@ def run_regression_models(
     )
 
     # Note: Models are now wrapped in TransformedTargetRegressor
-    models: List[tuple[str, TransformedTargetRegressor]] = _build_regression_models(random_state)
+    models: List[tuple[str, TransformedTargetRegressor]] = _build_regression_models(
+        random_state
+    )
 
     param_grids = {
         "Linear Regression": {},
@@ -171,28 +173,30 @@ def run_regression_models(
     }
 
 
-def _build_regression_models(random_state: int) -> List[tuple[str, TransformedTargetRegressor]]:
+def _build_regression_models(
+    random_state: int,
+) -> List[tuple[str, TransformedTargetRegressor]]:
     """
     Build a list of regression models wrapped to enforce 0-1 constraints.
     """
-    
+
     # Helper to wrap pipelines
     def make_constrained(pipeline):
         return TransformedTargetRegressor(
-            regressor=pipeline,
-            func=logit,
-            inverse_func=expit
+            regressor=pipeline, func=logit, inverse_func=expit
         )
 
     return [
         (
-            "Linear Regression", 
-            make_constrained(Pipeline(steps=[("model", LinearRegression())]))
+            "Linear Regression",
+            make_constrained(Pipeline(steps=[("model", LinearRegression())])),
         ),
         (
             "Ridge Regression",
             make_constrained(
-                Pipeline(steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))])
+                Pipeline(
+                    steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]
+                )
             ),
         ),
         (
@@ -271,7 +275,7 @@ def _collect_regression_metrics(
 
 def _get_refined_regression_grid(best_params: dict) -> dict:
     """Get the hyperparameter grid to refine the model further.
-    
+
     Handles the 'regressor__' prefix introduced by TransformedTargetRegressor.
     """
     refined_grid = {}
