@@ -88,7 +88,17 @@ def run_modeling_suite(
             results["best_model_fitted"] = best_model
 
     results["coefficients"] = pd.DataFrame(
-        collect_coefficients(results["best_model_name"], results["best_model_fitted"], X, y, random_state)
+        collect_coefficients(
+            results["best_model_name"],
+            (
+                results["best_model_fitted"].regressor_
+                if target_type == "continuous"
+                else results["best_model_fitted"].best_estimator_
+            ),
+            X,
+            y,
+            random_state,
+        )
     )
 
     return results
