@@ -16,6 +16,8 @@ def run_modeling_suite(
     random_state: int = 42,
     feature_types: dict[str, str] | None = None,
     imbalance_strategy: str | None = None,
+    use_standard_scaling: bool = True,
+    refine_hyperparameters: bool = True,
 ) -> dict[str, object]:
     """Train baseline models suited to the detected target type.
 
@@ -28,6 +30,8 @@ def run_modeling_suite(
         imbalance_strategy: Strategy for handling imbalanced data. Options:
             Classification: "none", "class_weight" (default), "smote", "adasyn", "oversample", "undersample", "threshold_adjust".
             Regression: "none", "sample_weight" (default).
+        use_standard_scaling: Whether to include StandardScaler steps in model pipelines.
+        refine_hyperparameters: Whether to run a second, narrowed grid search per model.
 
     Returns:
         dict[str, object]: Dictionary containing modeling results and artifacts.
@@ -60,6 +64,8 @@ def run_modeling_suite(
                 y,
                 test_size=test_size,
                 random_state=random_state,
+                use_standard_scaling=use_standard_scaling,
+                refine_hyperparameters=refine_hyperparameters,
             )
         )
     elif target_type == "binary":
@@ -71,6 +77,8 @@ def run_modeling_suite(
                 test_size=test_size,
                 random_state=random_state,
                 imbalance_strategy=strategy,
+                use_standard_scaling=use_standard_scaling,
+                refine_hyperparameters=refine_hyperparameters,
             )
         )
     else:

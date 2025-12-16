@@ -223,20 +223,45 @@ def summarize_continuous_stats(
     return pd.DataFrame(rows)
 
 
-def ohe_features(df: pd.DataFrame, feature_types: dict) -> pd.DataFrame:
+def ohe_features(
+    df: pd.DataFrame,
+    feature_types: dict,
+    *,
+    enable: bool = True,
+) -> pd.DataFrame:
     """
     One-hot encode categorical features using sklearn.
 
     Creates binary columns for each category and removes the original columns.
-    Returns the dataframe unchanged if there are no categorical features.
+    Returns the dataframe unchanged if there are no categorical features or if
+    one-hot encoding is disabled (for ablation studies).
 
     Args:
         df (pd.DataFrame): Input dataframe.
         feature_types (dict): Dictionary mapping feature names to types.
+        enable (bool): Whether to perform one-hot encoding. Defaults to True.
 
     Returns:
         Tuple[pd.DataFrame, dict]: Tuple containing the dataframe with OHE features and the updated feature types.
     """
+    if not enable:
+        df = df.copy()
+        feature_types = feature_types.copy()
+        for column in ALL_CATEGORICAL_FEATURES:
+            if column not in df.columns:
+                continue
+
+            categories = df[column].dropna().astype(str).unique().tolist()
+            categories = sorted(categories)
+            coded = pd.Categorical(
+                df[column].astype(str), categories=categories, ordered=True
+            ).codes
+            coded_series = pd.Series(coded, index=df.index)
+            coded_series = coded_series.replace(-1, pd.NA)
+            df[column] = coded_series
+
+        return df, feature_types
+
     df = df.copy()
     feature_types = feature_types.copy()
 

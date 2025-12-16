@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from src.feature_config import SOCIO_DEMOGRAPHIC_VALUES
 from src.utils.pipeline import (
@@ -38,6 +39,30 @@ def _predict_scores(
 
     preds = model.predict(features)
     return np.asarray(preds)
+
+
+def build_scaler_step(use_standard_scaling: bool) -> tuple[str, StandardScaler] | None:
+    """Return a StandardScaler pipeline step when enabled (ablation-friendly)."""
+
+    if not use_standard_scaling:
+        return None
+    return ("scaler", StandardScaler())
+
+
+def assemble_steps(*steps: tuple[str, object] | None) -> list[tuple[str, object]]:
+    """Filter out None steps while preserving order for pipeline construction."""
+
+    assembled: list[tuple[str, object]] = []
+    for step in steps:
+        if step is None:
+            continue
+        try:
+            name, component = step
+        except Exception:
+            # Skip malformed entries instead of raising at pipeline build time
+            continue
+        assembled.append((name, component))
+    return assembled
 
 
 def _expand_neighborhood_grid(
@@ -79,10 +104,12 @@ def _align_feature_space(
     df: pd.DataFrame,
     expected_features: list[str],
     feature_types: dict[str, str],
+    *,
+    enable_ohe: bool = True,
 ) -> pd.DataFrame:
     """Align inference dataframe to the training feature space using shared OHE logic."""
 
-    encoded, _ = ohe_features(df, feature_types)
+    encoded, _ = ohe_features(df, feature_types, enable=enable_ohe)
 
     for col in expected_features:
         if col not in encoded.columns:
@@ -97,6 +124,8 @@ def infer_neighborhood_health_risks(
     feature_types_map: dict[str, dict[str, str]],
     morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
     socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
+    *,
+    enable_ohe: bool = True,
 ) -> dict[str, pd.DataFrame]:
     """Score health risks per neighborhood across socio-demographic combinations.
 
@@ -105,6 +134,7 @@ def infer_neighborhood_health_risks(
         feature_types_map: Mapping from health category to feature_types dict used in training.
         morph_csv_path: Path to the neighborhoods CSV (cleaned morphology).
         socio_config: Dict of socio-demographic feature -> list of possible values.
+        enable_ohe: Whether to apply one-hot encoding during feature alignment (ablation toggle).
 
     Returns:
         Dict[str, pd.DataFrame]: For each health category, a dataframe containing
@@ -132,6 +162,7 @@ def infer_neighborhood_health_risks(
             processed,
             expected_features=expected_features,
             feature_types=feature_types,
+            enable_ohe=enable_ohe,
         )
 
         scores = _predict_scores(model, aligned, target_type=target_type)

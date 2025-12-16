@@ -13,8 +13,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
+from src.utils.prediction import assemble_steps, build_scaler_step
 
 
 def run_regression_models(
@@ -24,6 +24,8 @@ def run_regression_models(
     test_size: float = 0.2,
     random_state: int = 42,
     cv: int = 5,
+    use_standard_scaling: bool = True,
+    refine_hyperparameters: bool = True,
 ) -> Dict[str, object]:
     """Train constrained (0-1) regressors using k-fold CV grid search.
 
@@ -33,6 +35,8 @@ def run_regression_models(
         test_size (float): Proportion of dataset to include in the test split.
         random_state (int): Random state for reproducibility.
         cv (int): Number of folds for cross-validation.
+        use_standard_scaling (bool): Whether to include StandardScaler steps (ablation toggle).
+        refine_hyperparameters (bool): Whether to run a second, narrowed grid search.
 
     Returns:
         Dict[str, object]: A dictionary containing regression results and artifacts.
@@ -70,7 +74,7 @@ def run_regression_models(
 
     # Note: Models are now wrapped in TransformedTargetRegressor
     models: List[tuple[str, TransformedTargetRegressor]] = _build_regression_models(
-        random_state
+        random_state, use_standard_scaling=use_standard_scaling
     )
 
     param_grids = {
@@ -98,6 +102,7 @@ def run_regression_models(
 
     for name, model_wrapper in models:
         grid = param_grids.get(name, {})
+        best_params = None
         try:
             gs = GridSearchCV(
                 model_wrapper,
@@ -108,26 +113,30 @@ def run_regression_models(
                 error_score="raise",
             )
             gs.fit(X_train, y_train)
-
-            # Refine Grid
-            refined_grid = _get_refined_regression_grid(gs.best_params_)
-            gs = GridSearchCV(
-                model_wrapper,
-                refined_grid,
-                cv=cv_strategy,
-                scoring="r2",
-                n_jobs=-1,
-                error_score="raise",
-            )
-            gs.fit(X_train, y_train)
             best = gs.best_estimator_
+            best_params = gs.best_params_
+
+            if refine_hyperparameters and grid:
+                # Refine Grid
+                refined_grid = _get_refined_regression_grid(gs.best_params_)
+                gs = GridSearchCV(
+                    model_wrapper,
+                    refined_grid,
+                    cv=cv_strategy,
+                    scoring="r2",
+                    n_jobs=-1,
+                    error_score="raise",
+                )
+                gs.fit(X_train, y_train)
+                best = gs.best_estimator_
+                best_params = gs.best_params_
             y_pred = best.predict(X_test)
         except Exception as e:
             print(f"Skipping {name} due to error: {e}")
             continue
 
         metrics = _collect_regression_metrics(name, y_test, y_pred)
-        metrics["best_params"] = gs.best_params_
+        metrics["best_params"] = best_params or gs.best_params_
 
         regression_records.append(metrics)
 
@@ -137,7 +146,7 @@ def run_regression_models(
         }
 
         best_estimators[name] = best
-        best_params_map[name] = gs.best_params_
+        best_params_map[name] = metrics["best_params"]
 
     regression_df = (
         pd.DataFrame(regression_records).sort_values(by="RMSE")
@@ -166,6 +175,8 @@ def run_regression_models(
 
 def _build_regression_models(
     random_state: int,
+    *,
+    use_standard_scaling: bool = True,
 ) -> List[tuple[str, TransformedTargetRegressor]]:
     """
     Build a list of regression models wrapped to enforce 0-1 constraints.
@@ -177,6 +188,8 @@ def _build_regression_models(
             regressor=pipeline, func=logit, inverse_func=expit
         )
 
+    scaler_step = build_scaler_step(use_standard_scaling)
+
     return [
         (
             "Linear Regression",
@@ -185,19 +198,17 @@ def _build_regression_models(
         (
             "Ridge Regression",
             make_constrained(
-                Pipeline(
-                    steps=[("scaler", StandardScaler()), ("model", Ridge(alpha=1.0))]
-                )
+                Pipeline(steps=assemble_steps(scaler_step, ("model", Ridge(alpha=1.0))))
             ),
         ),
         (
             "Lasso Regression",
             make_constrained(
                 Pipeline(
-                    steps=[
-                        ("scaler", StandardScaler()),
+                    steps=assemble_steps(
+                        scaler_step,
                         ("model", Lasso(alpha=0.001, max_iter=10000)),
-                    ]
+                    )
                 )
             ),
         ),
@@ -205,10 +216,10 @@ def _build_regression_models(
             "Kernel Ridge",
             make_constrained(
                 Pipeline(
-                    steps=[
-                        ("scaler", StandardScaler()),
+                    steps=assemble_steps(
+                        scaler_step,
                         ("model", KernelRidge(alpha=1.0, kernel="rbf")),
-                    ]
+                    )
                 )
             ),
         ),
@@ -231,10 +242,10 @@ def _build_regression_models(
             "SVR (RBF)",
             make_constrained(
                 Pipeline(
-                    steps=[
-                        ("scaler", StandardScaler()),
+                    steps=assemble_steps(
+                        scaler_step,
                         ("model", SVR(kernel="rbf", C=1.0, epsilon=0.1)),
-                    ]
+                    )
                 )
             ),
         ),
@@ -242,10 +253,10 @@ def _build_regression_models(
             "k-NN Regressor",
             make_constrained(
                 Pipeline(
-                    steps=[
-                        ("scaler", StandardScaler()),
+                    steps=assemble_steps(
+                        scaler_step,
                         ("model", KNeighborsRegressor(n_neighbors=5)),
-                    ]
+                    )
                 )
             ),
         ),

@@ -15,16 +15,18 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
+from sklearn.model_selection import (
+    train_test_split,
+    GridSearchCV,
+    StratifiedKFold,
+    cross_val_predict,
+)
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
-
-try:
-    from imblearn.pipeline import Pipeline as ImbPipeline
-except ImportError:
-    ImbPipeline = Pipeline
+from imblearn.pipeline import Pipeline as ImbPipeline
+from src.utils.prediction import assemble_steps, build_scaler_step
 
 
 def run_classification_models(
@@ -35,6 +37,8 @@ def run_classification_models(
     random_state: int = 42,
     cv: int = 5,
     imbalance_strategy: str = "class_weight",
+    use_standard_scaling: bool = True,
+    refine_hyperparameters: bool = True,
 ) -> Dict[str, object]:
     """Train baseline classifiers with k-fold CV grid search and return evaluation artefacts.
 
@@ -48,6 +52,8 @@ def run_classification_models(
         cv (int): Number of folds for cross-validation.
         imbalance_strategy (str): Strategy for class imbalance. Options:
             "none", "class_weight" (default), "smote", "oversample", "undersample".
+        use_standard_scaling (bool): Whether to include StandardScaler steps (ablation toggle).
+        refine_hyperparameters (bool): Whether to run a second, narrowed grid search.
 
     Returns:
         Dict[str, object]: A dictionary containing classification results and artifacts.
@@ -98,8 +104,8 @@ def run_classification_models(
         (
             "Logistic Regression (Ridge)",
             create_pipeline(
-                [
-                    ("scaler", StandardScaler()),
+                assemble_steps(
+                    build_scaler_step(use_standard_scaling),
                     (
                         "model",
                         LogisticRegression(
@@ -110,14 +116,14 @@ def run_classification_models(
                             class_weight=class_weight,
                         ),
                     ),
-                ]
+                )
             ),
         ),
         (
             "Logistic Regression (Lasso)",
             create_pipeline(
-                [
-                    ("scaler", StandardScaler()),
+                assemble_steps(
+                    build_scaler_step(use_standard_scaling),
                     (
                         "model",
                         LogisticRegression(
@@ -128,7 +134,7 @@ def run_classification_models(
                             class_weight=class_weight,
                         ),
                     ),
-                ]
+                )
             ),
         ),
         (
@@ -147,8 +153,8 @@ def run_classification_models(
         (
             "SVM (Linear)",
             create_pipeline(
-                [
-                    ("scaler", StandardScaler()),
+                assemble_steps(
+                    build_scaler_step(use_standard_scaling),
                     (
                         "model",
                         SVC(
@@ -158,14 +164,14 @@ def run_classification_models(
                             class_weight=class_weight,
                         ),
                     ),
-                ]
+                )
             ),
         ),
         (
             "SVM (RBF)",
             create_pipeline(
-                [
-                    ("scaler", StandardScaler()),
+                assemble_steps(
+                    build_scaler_step(use_standard_scaling),
                     (
                         "model",
                         SVC(
@@ -175,16 +181,16 @@ def run_classification_models(
                             class_weight=class_weight,
                         ),
                     ),
-                ]
+                )
             ),
         ),
         (
             "k-NN Classifier",
             create_pipeline(
-                [
-                    ("scaler", StandardScaler()),
+                assemble_steps(
+                    build_scaler_step(use_standard_scaling),
                     ("model", KNeighborsClassifier()),
-                ]
+                )
             ),
         ),
     ]
@@ -209,8 +215,11 @@ def run_classification_models(
 
     cv_strategy = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
 
+    thresholds: Dict[str, float] = {}
+
     for name, pipeline in models:
         grid = param_grids.get(name, {})
+        best_params = None
         try:
             gs = GridSearchCV(
                 pipeline,
@@ -221,19 +230,31 @@ def run_classification_models(
                 error_score="raise",
             )
             gs.fit(X_train, y_train)
-
-            refined_grid = _get_refined_classification_grid(gs.best_params_)
-            gs = GridSearchCV(
-                pipeline,
-                refined_grid,
-                cv=cv_strategy,
-                scoring="recall",
-                n_jobs=-1,
-                error_score="raise",
-            )
-            gs.fit(X_train, y_train)
             best = gs.best_estimator_
-            y_pred = best.predict(X_test)
+            best_params = gs.best_params_
+
+            if refine_hyperparameters and grid:
+                refined_grid = _get_refined_classification_grid(gs.best_params_)
+                gs = GridSearchCV(
+                    pipeline,
+                    refined_grid,
+                    cv=cv_strategy,
+                    scoring="recall",
+                    n_jobs=-1,
+                    error_score="raise",
+                )
+                gs.fit(X_train, y_train)
+                best = gs.best_estimator_
+                best_params = gs.best_params_
+
+            threshold = _find_best_threshold(best, X_train, y_train, cv_strategy)
+            scores_test = _safe_prediction_scores(best, X_test)
+            threshold_used = threshold if scores_test is not None else math.nan
+            y_pred = (
+                _apply_threshold(scores_test, threshold)
+                if scores_test is not None
+                else best.predict(X_test)
+            )
 
         except Exception as e:
             print(f"Model {name} failed during GridSearchCV: {e}")
@@ -241,7 +262,8 @@ def run_classification_models(
 
         metrics = _collect_classification_metrics(best, y_test, y_pred, X_test)
         metrics["model"] = name
-        metrics["best_params"] = gs.best_params_
+        metrics["best_params"] = best_params or gs.best_params_
+        metrics["threshold"] = threshold_used
 
         classification_records.append(metrics)
 
@@ -252,7 +274,8 @@ def run_classification_models(
             cm, index=index_labels, columns=column_labels
         )
         best_estimators[name] = best
-        best_params_map[name] = gs.best_params_
+        best_params_map[name] = metrics["best_params"]
+        thresholds[name] = threshold_used
 
     results_df = (
         pd.DataFrame(classification_records).sort_values(by="F1", ascending=False)
@@ -267,7 +290,6 @@ def run_classification_models(
     best_params = (
         best_params_map.get(best_model_name) if best_model_name is not None else None
     )
-
     return {
         "classification_results": results_df,
         "confusion_matrices": confusion_matrices,
@@ -275,6 +297,7 @@ def run_classification_models(
         "best_model": best_model,
         "best_model_name": best_model_name,
         "best_params": best_params,
+        "thresholds": thresholds,
     }
 
 
@@ -344,6 +367,59 @@ def _safe_prediction_scores(model: Pipeline, X_test: pd.DataFrame) -> np.ndarray
         return model.decision_function(X_test)
     except Exception:
         return None
+
+
+def _find_best_threshold(
+    model: Pipeline,
+    X: pd.DataFrame,
+    y: np.ndarray,
+    cv_strategy: StratifiedKFold,
+) -> float:
+    """Find the probability/score threshold that maximizes F1 via CV predictions."""
+
+    scores = _cross_val_scores(model, X, y, cv_strategy)
+    if scores is None:
+        return 0.5
+
+    # Sample candidate thresholds from score quantiles to keep it fast.
+    quantiles = np.linspace(0, 1, 101)
+    candidates = np.unique(np.quantile(scores, quantiles))
+    best_thresh = 0.5
+    best_f1 = -1.0
+    for thresh in candidates:
+        preds = _apply_threshold(scores, thresh)
+        f1 = f1_score(y, preds, average="binary", zero_division=0)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_thresh = float(thresh)
+
+    return best_thresh
+
+
+def _cross_val_scores(
+    model: Pipeline, X: pd.DataFrame, y: np.ndarray, cv_strategy: StratifiedKFold
+) -> np.ndarray | None:
+    """Generate out-of-fold scores for threshold search."""
+
+    try:
+        probs = cross_val_predict(
+            model, X, y, cv=cv_strategy, method="predict_proba", n_jobs=-1
+        )
+        if probs.ndim == 2 and probs.shape[1] > 1:
+            return probs[:, 1]
+    except Exception:
+        pass
+
+    try:
+        return cross_val_predict(
+            model, X, y, cv=cv_strategy, method="decision_function", n_jobs=-1
+        )
+    except Exception:
+        return None
+
+
+def _apply_threshold(scores: np.ndarray, threshold: float) -> np.ndarray:
+    return (scores >= threshold).astype(int)
 
 
 def _get_refined_classification_grid(
