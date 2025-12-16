@@ -1,6 +1,5 @@
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, Sequence
 import pandas as pd
-import re
 
 from scipy.stats import skew
 

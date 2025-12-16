@@ -26,8 +26,6 @@ try:
 except ImportError:
     ImbPipeline = Pipeline
 
-from src.utils.prediction import collect_coefficients
-
 
 def run_classification_models(
     X: pd.DataFrame,
@@ -206,7 +204,6 @@ def run_classification_models(
 
     classification_records: List[Dict[str, float]] = []
     confusion_matrices: Dict[str, pd.DataFrame] = {}
-    coefficient_records: List[Dict[str, float]] = []
     best_estimators: Dict[str, Pipeline] = {}
     best_params_map: Dict[str, dict] = {}
 
@@ -247,9 +244,6 @@ def run_classification_models(
         metrics["best_params"] = gs.best_params_
 
         classification_records.append(metrics)
-        coefficient_records.extend(
-            collect_coefficients(name, best, X_train, y_train, random_state)
-        )
 
         cm = confusion_matrix(y_test, y_pred)
         index_labels = [f"Actual_{label}" for label in class_labels]
@@ -265,7 +259,6 @@ def run_classification_models(
         if classification_records
         else pd.DataFrame()
     )
-    coefficients_df = pd.DataFrame(coefficient_records)
 
     best_model_name = results_df.iloc[0]["model"] if not results_df.empty else None
     best_model = (
@@ -279,7 +272,6 @@ def run_classification_models(
         "classification_results": results_df,
         "confusion_matrices": confusion_matrices,
         "class_labels": class_labels,
-        "coefficients": coefficients_df,
         "best_model": best_model,
         "best_model_name": best_model_name,
         "best_params": best_params,

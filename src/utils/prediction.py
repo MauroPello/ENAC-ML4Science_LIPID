@@ -1,10 +1,8 @@
-from copy import deepcopy
 from itertools import product
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
 
 from src.feature_config import SOCIO_DEMOGRAPHIC_VALUES
@@ -14,55 +12,6 @@ from src.utils.pipeline import (
     ohe_features,
     process_additional_features,
 )
-
-
-def collect_coefficients(
-    name: str,
-    model: Pipeline,
-    X_train: pd.DataFrame,
-    y_train: np.ndarray,
-    random_state: int,
-) -> list[dict[str, float]]:
-    """Collect feature coefficients or importance scores from a model.
-
-    Args:
-        name (str): Name of the model.
-        model (Pipeline): Trained model pipeline.
-        X_train (pd.DataFrame): Training feature matrix.
-        y_train (np.ndarray): Training target vector.
-        random_state (int): Random state for reproducibility.
-
-    Returns:
-        list[dict[str, float]]: List of dictionaries containing feature importance/coefficent info.
-    """
-    final_estimator = model.named_steps.get("model", model)
-
-    if hasattr(final_estimator, "coef_"):
-        coefs = np.asarray(final_estimator.coef_)
-        if coefs.ndim > 1:
-            coefs = np.mean(np.abs(coefs), axis=0)
-        values = coefs
-    elif hasattr(final_estimator, "feature_importances_"):
-        values = np.asarray(final_estimator.feature_importances_)
-    else:
-        perm = permutation_importance(
-            model,
-            X_train,
-            y_train,
-            n_repeats=5,
-            random_state=random_state,
-            n_jobs=-1,
-        )
-        values = np.asarray(perm.importances_mean)
-
-    return [
-        {
-            "model": name,
-            "feature": feature_name,
-            "coefficient": float(coef_value),
-        }
-        for feature_name, coef_value in zip(X_train.columns, values)
-    ]
 
 
 def _predict_scores(

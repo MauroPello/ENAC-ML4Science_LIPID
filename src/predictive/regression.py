@@ -16,8 +16,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
-from src.utils.prediction import collect_coefficients
-
 
 def run_regression_models(
     X: pd.DataFrame,
@@ -92,7 +90,6 @@ def run_regression_models(
     }
 
     regression_records: List[Dict[str, float]] = []
-    coefficient_records: List[Dict[str, float]] = []
     residual_payload: Dict[str, Dict[str, np.ndarray]] = {}
     best_estimators: Dict[str, object] = {}
     best_params_map: Dict[str, dict] = {}
@@ -134,10 +131,6 @@ def run_regression_models(
 
         regression_records.append(metrics)
 
-        coefficient_records.extend(
-            collect_coefficients(name, best.regressor_, X_train, y_train, random_state)
-        )
-
         residual_payload[name] = {
             "pred": np.asarray(y_pred),
             "resid": np.asarray(y_test - y_pred),
@@ -151,7 +144,6 @@ def run_regression_models(
         if regression_records
         else pd.DataFrame()
     )
-    coefficients_df = pd.DataFrame(coefficient_records)
 
     best_model_name = (
         regression_df.iloc[0]["model"] if not regression_df.empty else None
@@ -165,7 +157,6 @@ def run_regression_models(
 
     return {
         "regression_results": regression_df,
-        "coefficients": coefficients_df,
         "residuals": residual_payload,
         "best_model": best_model,
         "best_model_name": best_model_name,

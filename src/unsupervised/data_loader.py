@@ -5,7 +5,7 @@ Handles loading the integrated dataset and splitting it into Environmental and M
 
 import pandas as pd
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 
