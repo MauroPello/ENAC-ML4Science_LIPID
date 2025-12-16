@@ -93,7 +93,7 @@ def run_modeling_suite(
             (
                 results["best_model_fitted"].regressor_
                 if target_type == "continuous"
-                else results["best_model_fitted"].best_estimator_
+                else results["best_model_fitted"]
             ),
             X,
             y,
