@@ -298,6 +298,8 @@ def run_classification_models(
         "best_model_name": best_model_name,
         "best_params": best_params,
         "thresholds": thresholds,
+        "y_pred": y_pred,
+        "y_true": y_test,
     }
 
 

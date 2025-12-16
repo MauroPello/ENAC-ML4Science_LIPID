@@ -170,6 +170,8 @@ def run_regression_models(
         "best_model": best_model,
         "best_model_name": best_model_name,
         "best_params": best_params,
+        "y_pred": y_pred,
+        "y_true": y_test,
     }
 
 
