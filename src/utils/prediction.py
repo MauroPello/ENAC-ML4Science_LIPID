@@ -182,9 +182,21 @@ def _load_model_from_config(outputs_dir: Path, config: dict[str, object], health
         return None
 
 
+def _discover_health_keys(outputs_dir: Path) -> list[str]:
+    """Find health keys by scanning output subfolders that contain a config file."""
+
+    keys: list[str] = []
+    for child in outputs_dir.iterdir():
+        if not child.is_dir():
+            continue
+        if (child / "config.json").exists():
+            keys.append(child.name)
+    return sorted(keys)
+
+
 def infer_neighborhood_health_risks(
-    best_models: dict[str, Pipeline] | None,
-    feature_types_map: dict[str, dict[str, str]],
+    best_models: dict[str, Pipeline] | None = None,
+    feature_types_map: dict[str, dict[str, str]] | None = None,
     morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
     *,
     enable_ohe: bool = True,
@@ -195,7 +207,10 @@ def infer_neighborhood_health_risks(
     Args:
         best_models: Mapping from health category (e.g., "mental_health") to fitted estimator.
             If None, each model is loaded on demand using that category's config file.
-        feature_types_map: Mapping from health category to feature_types dict used in training.
+        feature_types_map: Optional mapping from health category to feature_types dict used in training.
+            When omitted, the function scans `outputs_dir` for per-health configs and uses the
+            `feature_types` found in each `config.json`.
+
         morph_csv_path: Path to the neighborhoods CSV (cleaned morphology).
         enable_ohe: Whether to apply one-hot encoding during feature alignment (ablation toggle).
         outputs_dir: Directory containing persisted best models and configuration files.
@@ -208,16 +223,21 @@ def infer_neighborhood_health_risks(
     outputs_dir = Path(outputs_dir)
     outputs_dir.mkdir(exist_ok=True)
 
+    best_models = best_models or {}
+    feature_types_map = feature_types_map or {}
+
     expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=SOCIO_DEMOGRAPHIC_VALUES)
     processed = _preprocess_for_inference(expanded)
 
     socio_cols = list(SOCIO_DEMOGRAPHIC_VALUES.keys())
     outputs: dict[str, pd.DataFrame] = {}
 
-    for health_key in feature_types_map.keys():
+    health_keys = list(feature_types_map.keys()) or _discover_health_keys(outputs_dir)
+
+    for health_key in health_keys:
         config = _load_single_config(outputs_dir, health_key)
 
-        model = (best_models or {}).get(health_key)
+        model = best_models.get(health_key)
         if model is None:
             model = _load_model_from_config(outputs_dir, config, health_key)
         if model is None:
