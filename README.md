@@ -11,17 +11,35 @@ conda activate mlenv                  # if you used conda
 python -m ipykernel install --user --name mlenv
 ```
 
+## Repository organization
+- Entry: [main.ipynb](main.ipynb) (notebook) or [main.py](main.py) (script) for end-to-end runs.
+- Core logic: preprocessing in [src/utils/pipeline.py](src/utils/pipeline.py); targets in [src/target_definition/aggregate.py](src/target_definition/aggregate.py); models and grids in [src/predictive/classification.py](src/predictive/classification.py) and [src/predictive/regression.py](src/predictive/regression.py).
+- Config/constants: [src/feature_config.py](src/feature_config.py).
+- Inference helper: [src/utils/prediction.py](src/utils/prediction.py).
+- Experiments: supervised notebook in [main.ipynb](main.ipynb); unsupervised in [notebooks/unsupervised_analysis.ipynb](notebooks/unsupervised_analysis.ipynb); ablations in [notebooks/ablation_study](notebooks/ablation_study).
+- Artifacts: trained models/configs in [outputs](outputs); ablation predictions in [data/ablation](data/ablation); raw/clean data in [data](data).
+
 ## Data inputs
 - Data under `data/`:
 	- `data/morphology_data_cleaned.csv`: cleaned morphology per neighborhood (real, post-processed).
 	- `data/morphology_data_integrated.csv`: integrated morphology/environment view (real and raw; used by unsupervised analysis).
 	- `data/synthetic_health_data.xlsx`: synthetic health workbook used for demonstration when real health data is unavailable.
 	- `data/ablation/*`: saved model predictions from ablation runs (classification targets).
-- Default preprocessing expects two real sources when available:
+- Default preprocessing expects two real sources:
 	1) Morphology CSV with a `neighborhood_id` column (or `id`, auto-renamed) containing the features listed in [src/feature_config.py](src/feature_config.py).
 	2) Health Excel workbook with sheets:
 		 - `Participant_SocioDemograph_Data` (socio-demographics)
 		 - `Participant_HEALTH_Data` (clinical/health indicators)
+
+## Reproducibility and execution steps
+1) Create/activate the `mlenv` env (see [Setup](#setup)) and select it as the Jupyter kernel.
+2) Run [main.ipynb](main.ipynb) top-to-bottom **or** execute:
+
+```bash
+python main.py
+```
+
+3) Outputs (models, configs, metrics) land under [outputs](outputs); ablation predictions remain under [data/ablation](data/ablation). Unsupervised plots are produced inside [notebooks/unsupervised_analysis.ipynb](notebooks/unsupervised_analysis.ipynb).
 
 ## Swapping synthetic for real data
 1) Place your real health Excel in the repo `data/` folder.
@@ -33,7 +51,7 @@ python -m ipykernel install --user --name mlenv
 	 - Drop unused columns to the modeled feature set.
 
 ## Running the analyses
-- **Supervised (core)**: `main.ipynb` — end-to-end load → preprocess → target aggregation → model search (classification/regression) → saving results.
+- **Supervised (core)**: `main.ipynb` - end-to-end load → preprocess → target aggregation → model search (classification/regression) → saving results.
 - **Unsupervised morphology–environment**: `notebooks/unsupervised_analysis.ipynb` using `load_and_split_data` from [src/unsupervised/data_loader.py](src/unsupervised/data_loader.py).
 - **Ablation studies**: `notebooks/ablation_study/*.ipynb` plus their prediction CSVs under `data/ablation/`.
 - To run: open the notebook in VS Code/Jupyter, select the `mlenv` kernel, and execute top to bottom. There is no CLI wrapper; notebooks orchestrate calls into the modules.
@@ -87,7 +105,7 @@ python -m ipykernel install --user --name mlenv
 - Feature lists and allowed socio-demographic values: [src/feature_config.py](src/feature_config.py).
 - Preprocessing steps (age bins, ordinal encodings, OHE toggle, feature whitelist): [src/utils/pipeline.py](src/utils/pipeline.py).
 - Target definitions (risk formulas/thresholds): [src/target_definition/aggregate.py](src/target_definition/aggregate.py).
-- Univariate feature screening thresholds/tests: [src/feature_selection/binary.py](src/feature_selection/binary.py) and [src/feature_selection/continuous.py](src/feature_selection/continuous.py).
+- Feature screening thresholds/tests: [src/feature_selection/binary.py](src/feature_selection/binary.py) and [src/feature_selection/continuous.py](src/feature_selection/continuous.py).
 - Model lists and default grids: [src/predictive/classification.py](src/predictive/classification.py) and [src/predictive/regression.py](src/predictive/regression.py).
 - Grid refinement rules and threshold tuning: `_get_refined_classification_grid`, `_find_best_threshold` in [src/predictive/classification.py](src/predictive/classification.py#L150-L320); `_get_refined_regression_grid` in [src/predictive/regression.py](src/predictive/regression.py#L213-L293).
 
@@ -103,6 +121,17 @@ python -m ipykernel install --user --name mlenv
 - Unsupervised outputs: produced in notebook cells (UMAP/cluster plots) using `notebooks/unsupervised_analysis.ipynb`.
 - Best fitted model per dataset: saved as `outputs/<dataset>/<model>.joblib` with metadata in `outputs/<dataset>/config.json` (model name, fitted file, optional threshold, feature types, and OHE flag) for notebook or batch inference.
 - Inference helper: `infer_neighborhood_health_risks` in [src/utils/prediction.py](src/utils/prediction.py) scores all socio-demographic combinations per neighborhood and returns dataframes you can export.
+
+## Inference: what it does and how
+- Purpose: score new morphology CSVs with the saved models to estimate per-neighborhood health risks across all socio-demographic combinations, then summarize risk by typology and flag higher/lower-than-average profiles.
+- How to run quickly: adjust the `csv_path` in [scripts/inference.py](scripts/inference.py) if you have a custom morphology file in [data](data), then run:
+
+```bash
+python scripts/inference.py
+```
+
+- What it produces: per-target risk tables printed to stdout plus an aggregated table of average risk by typology; z-score flags identify typologies with elevated or suppressed modeled risk per target.
+- Under the hood: `infer_neighborhood_health_risks` loads the latest models/configs from [outputs](outputs), expands socio-demographic grids, and returns pandas dataframes for further export or plotting. Modify the script to persist the outputs (e.g., `to_csv`) if you need files.
 
 ## Tips for first run
 - Start with `main.ipynb` on the synthetic data to confirm the environment.
