@@ -111,6 +111,7 @@ def run_classification_models(
                         LogisticRegression(
                             penalty="l2",
                             solver="lbfgs",
+                            random_state=random_state,
                             max_iter=10000,
                             tol=1e-2,
                             class_weight=class_weight,
@@ -129,6 +130,7 @@ def run_classification_models(
                         LogisticRegression(
                             penalty="l1",
                             solver="saga",
+                            random_state=random_state,
                             max_iter=10000,
                             tol=1e-2,
                             class_weight=class_weight,
