@@ -25,7 +25,7 @@ python -m ipykernel install --user --name mlenv
 
 ## Swapping synthetic for real data
 1) Place your real health Excel in the repo `data/` folder.
-2) Update the path to the health Excel passed to the `load_combined_dataset` function in notebooks (see `main.ipynb` or `notebooks/pipeline_with_results.ipynb`). Provide `socio_sheet` / `clinical_sheet` names if they differ.
+2) Update the path to the health Excel passed to the `load_combined_dataset` function in notebooks (see `main.ipynb` or `main.py`). Provide `socio_sheet` / `clinical_sheet` names if they differ.
 3) Ensure columns match the configured features (see “Custom constants” below). Critical columns: morphology features, socio-demographics (`income`, `education_level`, `age`, `sex`), health indicators, and `neighborhood_id`.
 4) Run the preprocessing cell; it will:
 	 - Merge morphology + health on `neighborhood_id`.
@@ -34,7 +34,6 @@ python -m ipykernel install --user --name mlenv
 
 ## Running the analyses
 - **Supervised (core)**: `main.ipynb` — end-to-end load → preprocess → target aggregation → model search (classification/regression) → saving results.
-- **Saved pipeline recap**: `notebooks/pipeline_with_results.ipynb` — curated run with stored outputs.
 - **Unsupervised morphology–environment**: `notebooks/unsupervised_analysis.ipynb` using `load_and_split_data` from [src/unsupervised/data_loader.py](src/unsupervised/data_loader.py).
 - **Ablation studies**: `notebooks/ablation_study/*.ipynb` plus their prediction CSVs under `data/ablation/`.
 - To run: open the notebook in VS Code/Jupyter, select the `mlenv` kernel, and execute top to bottom. There is no CLI wrapper; notebooks orchestrate calls into the modules.
