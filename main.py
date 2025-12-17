@@ -1,16 +1,12 @@
 from pathlib import Path
 import pandas as pd
 import math
-import seaborn as sns
-import matplotlib.pyplot as plt
 from src.utils.pipeline import (
     load_combined_dataset,
     run_preprocessing_pipeline,
     ohe_features,
 )
 from src.feature_config import (
-    EQ_FEATURES,
-    MORPHOLOGY_FEATURES,
     ALL_CONTINUOUS_FEATURES,
     ALL_CATEGORICAL_FEATURES,
     ALL_BINARY_FEATURES,

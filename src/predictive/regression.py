@@ -128,7 +128,7 @@ def run_regression_models(
                     model_wrapper,
                     refined_grid,
                     cv=cv_strategy,
-                    scoring="r2",
+                    scoring="neg_mean_squared_error",
                     n_jobs=-1,
                     error_score="raise",
                 )
