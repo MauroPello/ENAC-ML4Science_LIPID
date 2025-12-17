@@ -1,12 +1,23 @@
 from pathlib import Path
+import sys
+
+# Add project root to path
+project_root = Path(__file__).resolve().parents[1]
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
+
 from src.utils.prediction import infer_neighborhood_health_risks
 
 
 # you can move your own csv to the data folder, change the path here
 # and run inference on the neighborhood data in your csv
 
+# Debug diagnostics
+csv_path = project_root / "data" / "morphology_data_cleaned.csv"
+outputs_dir = project_root / "outputs"
 health_risks = infer_neighborhood_health_risks(
-    morph_csv_path = Path("data/morphology_data_cleaned.csv")
+    morph_csv_path = csv_path,
+    outputs_dir = outputs_dir,
 )
 
 for name, df_risk in health_risks.items():
@@ -38,6 +49,7 @@ if rows:
     print(combined)
 else:
     print("No risk data available to summarize.")
+    sys.exit(0)
 
 # Flag typologies with elevated modeled risk per dataset (no melting)
 
