@@ -10,3 +10,4 @@ scipy
 joblib
 shap
 umap
+openpyxl
