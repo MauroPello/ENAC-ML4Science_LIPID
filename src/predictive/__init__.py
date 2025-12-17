@@ -91,6 +91,7 @@ def run_modeling_suite(
                 random_state=random_state,
                 use_standard_scaling=use_standard_scaling,
                 refine_hyperparameters=refine_hyperparameters,
+                feature_types=feature_types,
             )
         )
     elif target_type == "binary":
@@ -104,6 +105,7 @@ def run_modeling_suite(
                 imbalance_strategy=strategy,
                 use_standard_scaling=use_standard_scaling,
                 refine_hyperparameters=refine_hyperparameters,
+                feature_types=feature_types,
             )
         )
     else:

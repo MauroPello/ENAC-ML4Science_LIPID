@@ -5,6 +5,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -43,11 +44,40 @@ def _predict_scores(
     return np.asarray(preds)
 
 
-def build_scaler_step(use_standard_scaling: bool) -> tuple[str, StandardScaler] | None:
-    """Return a StandardScaler pipeline step when enabled (ablation-friendly)."""
+def build_scaler_step(
+    use_standard_scaling: bool,
+    feature_types: dict[str, str] | None = None,
+    *,
+    columns: list[str] | None = None,
+) -> tuple[str, ColumnTransformer | StandardScaler] | None:
+    """Return a scaling step that skips binary features when metadata is available."""
 
     if not use_standard_scaling:
         return None
+
+    if feature_types:
+        candidates = columns or list(feature_types.keys())
+        columns_to_scale = [
+            col
+            for col in candidates
+            if col != "target" and feature_types.get(col) != "binary"
+        ]
+
+        if not columns_to_scale:
+            return None
+
+        transformer = ColumnTransformer(
+            [
+                (
+                    "standard_scaler",
+                    StandardScaler(),
+                    columns_to_scale,
+                )
+            ],
+            remainder="passthrough",
+        )
+        return ("scaler", transformer)
+
     return ("scaler", StandardScaler())
 
 

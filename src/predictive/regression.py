@@ -26,6 +26,7 @@ def run_regression_models(
     cv: int = 5,
     use_standard_scaling: bool = True,
     refine_hyperparameters: bool = True,
+    feature_types: dict[str, str] | None = None,
 ) -> Dict[str, object]:
     """Train constrained (0-1) regressors using k-fold CV grid search.
 
@@ -37,6 +38,7 @@ def run_regression_models(
         cv (int): Number of folds for cross-validation.
         use_standard_scaling (bool): Whether to include StandardScaler steps (ablation toggle).
         refine_hyperparameters (bool): Whether to run a second, narrowed grid search.
+        feature_types (dict[str, str] | None): Feature metadata used to avoid scaling binary columns.
 
     Returns:
         Dict[str, object]: A dictionary containing regression results and artifacts.
@@ -74,7 +76,10 @@ def run_regression_models(
 
     # Note: Models are now wrapped in TransformedTargetRegressor
     models: List[tuple[str, TransformedTargetRegressor]] = _build_regression_models(
-        random_state, use_standard_scaling=use_standard_scaling
+        random_state,
+        use_standard_scaling=use_standard_scaling,
+        feature_types=feature_types,
+        feature_names=list(X_reg.columns),
     )
 
     param_grids = {
@@ -179,6 +184,8 @@ def _build_regression_models(
     random_state: int,
     *,
     use_standard_scaling: bool = True,
+    feature_types: dict[str, str] | None = None,
+    feature_names: list[str] | None = None,
 ) -> List[tuple[str, TransformedTargetRegressor]]:
     """
     Build a list of regression models wrapped to enforce 0-1 constraints.
@@ -190,7 +197,11 @@ def _build_regression_models(
             regressor=pipeline, func=logit, inverse_func=expit
         )
 
-    scaler_step = build_scaler_step(use_standard_scaling)
+    scaler_step = build_scaler_step(
+        use_standard_scaling,
+        feature_types=feature_types,
+        columns=feature_names,
+    )
 
     return [
         (

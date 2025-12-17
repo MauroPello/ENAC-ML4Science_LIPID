@@ -39,6 +39,7 @@ def run_classification_models(
     imbalance_strategy: str = "class_weight",
     use_standard_scaling: bool = True,
     refine_hyperparameters: bool = True,
+    feature_types: dict[str, str] | None = None,
 ) -> Dict[str, object]:
     """Train baseline classifiers with k-fold CV grid search and return evaluation artefacts.
 
@@ -54,6 +55,7 @@ def run_classification_models(
             "none", "class_weight" (default), "smote", "oversample", "undersample".
         use_standard_scaling (bool): Whether to include StandardScaler steps (ablation toggle).
         refine_hyperparameters (bool): Whether to run a second, narrowed grid search.
+        feature_types (dict[str, str] | None): Feature metadata used to avoid scaling binary columns.
 
     Returns:
         Dict[str, object]: A dictionary containing classification results and artifacts.
@@ -62,6 +64,8 @@ def run_classification_models(
     label_encoder = LabelEncoder()
     y_encoded = label_encoder.fit_transform(y)
     class_labels = label_encoder.classes_
+
+    feature_columns = list(X.columns)
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -105,7 +109,11 @@ def run_classification_models(
             "Logistic Regression (Ridge)",
             create_pipeline(
                 assemble_steps(
-                    build_scaler_step(use_standard_scaling),
+                    build_scaler_step(
+                        use_standard_scaling,
+                        feature_types=feature_types,
+                        columns=feature_columns,
+                    ),
                     (
                         "model",
                         LogisticRegression(
@@ -124,7 +132,11 @@ def run_classification_models(
             "Logistic Regression (Lasso)",
             create_pipeline(
                 assemble_steps(
-                    build_scaler_step(use_standard_scaling),
+                    build_scaler_step(
+                        use_standard_scaling,
+                        feature_types=feature_types,
+                        columns=feature_columns,
+                    ),
                     (
                         "model",
                         LogisticRegression(
@@ -156,7 +168,11 @@ def run_classification_models(
             "SVM (Linear)",
             create_pipeline(
                 assemble_steps(
-                    build_scaler_step(use_standard_scaling),
+                    build_scaler_step(
+                        use_standard_scaling,
+                        feature_types=feature_types,
+                        columns=feature_columns,
+                    ),
                     (
                         "model",
                         SVC(
@@ -173,7 +189,11 @@ def run_classification_models(
             "SVM (RBF)",
             create_pipeline(
                 assemble_steps(
-                    build_scaler_step(use_standard_scaling),
+                    build_scaler_step(
+                        use_standard_scaling,
+                        feature_types=feature_types,
+                        columns=feature_columns,
+                    ),
                     (
                         "model",
                         SVC(
@@ -190,7 +210,11 @@ def run_classification_models(
             "k-NN Classifier",
             create_pipeline(
                 assemble_steps(
-                    build_scaler_step(use_standard_scaling),
+                    build_scaler_step(
+                        use_standard_scaling,
+                        feature_types=feature_types,
+                        columns=feature_columns,
+                    ),
                     ("model", KNeighborsClassifier()),
                 )
             ),
