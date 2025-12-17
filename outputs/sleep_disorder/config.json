@@ -1,0 +1,31 @@
+{
+  "model": "Lasso Regression",
+  "model_file": "Lasso_Regression.joblib",
+  "dataset_name": "sleep_disorder",
+  "threshold": null,
+  "feature_types": {
+    "solar_summ": "continuous",
+    "solar_wint": "continuous",
+    "pm10_mean": "continuous",
+    "pm25_mean": "continuous",
+    "no2_mean": "continuous",
+    "noisenight": "continuous",
+    "building_height": "continuous",
+    "height_varability": "continuous",
+    "sky_view_factor": "continuous",
+    "frontal_area_index": "continuous",
+    "length_ne-sw": "continuous",
+    "length_primary_road": "continuous",
+    "sex": "binary",
+    "income": "continuous",
+    "education_level": "continuous",
+    "age_bin": "continuous",
+    "target": "continuous",
+    "typology_A": "binary",
+    "typology_C": "binary",
+    "typology_E": "binary",
+    "typology_I": "binary",
+    "typology_J": "binary"
+  },
+  "enable_ohe": true
+}

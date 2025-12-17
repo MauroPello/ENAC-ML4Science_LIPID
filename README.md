@@ -91,7 +91,6 @@ python -m ipykernel install --user --name mlenv
 - Univariate feature screening thresholds/tests: [src/feature_selection/binary.py](src/feature_selection/binary.py) and [src/feature_selection/continuous.py](src/feature_selection/continuous.py).
 - Model lists and default grids: [src/predictive/classification.py](src/predictive/classification.py) and [src/predictive/regression.py](src/predictive/regression.py).
 - Grid refinement rules and threshold tuning: `_get_refined_classification_grid`, `_find_best_threshold` in [src/predictive/classification.py](src/predictive/classification.py#L150-L320); `_get_refined_regression_grid` in [src/predictive/regression.py](src/predictive/regression.py#L213-L293).
-- Results storage/output structure: [src/results_management/manager.py](src/results_management/manager.py) (what gets saved) and [src/results_management/visualizer.py](src/results_management/visualizer.py) (plots).
 
 ## Extending models
 - To add another estimator to the search lists:
@@ -101,13 +100,9 @@ python -m ipykernel install --user --name mlenv
 	4) Keep `refine_hyperparameters` toggled to leverage the two-pass search automatically for the new model.
 
 ## Outputs and artifacts
-- Supervised runs (via notebooks): saved under `results/` using [src/results_management/manager.py](src/results_management/manager.py):
-	- `metadata.json` (experiment name, target, best model/params, timestamp).
-	- `classification_results.csv` or `regression_results.csv` (scored models).
-	- Optional `confusion_matrices/*.csv`, `residuals.json`, `best_model.joblib`, `best_model_fitted.joblib`.
-	- Visual review via `visualize_experiment("<experiment>")` from [src/results_management/visualizer.py](src/results_management/visualizer.py).
 - Ablation prediction files: `data/ablation/<encoding>/<target>_y_test_predictions.csv` for quick comparison.
 - Unsupervised outputs: produced in notebook cells (UMAP/cluster plots) using `notebooks/unsupervised_analysis.ipynb`.
+- Best fitted model per dataset: saved as `outputs/<dataset>/<model>.joblib` with metadata in `outputs/<dataset>/config.json` (model name, fitted file, optional threshold, feature types, and OHE flag) for notebook or batch inference.
 - Inference helper: `infer_neighborhood_health_risks` in [src/utils/prediction.py](src/utils/prediction.py) scores all socio-demographic combinations per neighborhood and returns dataframes you can export.
 
 ## Tips for first run

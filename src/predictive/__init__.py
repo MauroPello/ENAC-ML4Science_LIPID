@@ -1,16 +1,26 @@
+import json
+from pathlib import Path
+
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
 
+from src.utils.prediction import _sanitize_name
+
 from .classification import run_classification_models
 from .regression import run_regression_models
+
+
+OUTPUTS_DIR = Path("outputs")
 
 
 def run_modeling_suite(
     features: pd.DataFrame,
     target_feature: str,
+    dataset_name: str,
     *,
     test_size: float = 0.2,
     random_state: int = 42,
@@ -18,12 +28,14 @@ def run_modeling_suite(
     imbalance_strategy: str | None = None,
     use_standard_scaling: bool = True,
     refine_hyperparameters: bool = True,
+    enable_ohe: bool | None = None,
 ) -> dict[str, object]:
     """Train baseline models suited to the detected target type.
 
     Args:
         features (pd.DataFrame): DataFrame containing features and target.
         target_feature (str): Name of the target feature.
+        dataset_name (str): Name of the dataset.
         test_size (float, optional): Proportion of data to use as test set. Defaults to 0.2.
         random_state (int, optional): Random seed for reproducibility.
         feature_types (dict[str, str], optional): Dictionary specifying feature types.
@@ -32,9 +44,16 @@ def run_modeling_suite(
             Regression: "none", "sample_weight" (default).
         use_standard_scaling: Whether to include StandardScaler steps in model pipelines.
         refine_hyperparameters: Whether to run a second, narrowed grid search per model.
+        enable_ohe: Whether OHE was used during feature processing (stored in config metadata).
 
     Returns:
         dict[str, object]: Dictionary containing modeling results and artifacts.
+
+    Side effects:
+        Persists the best fitted model to outputs/, and writes a configuration
+        JSON (per target) containing the best model name, threshold (if binary),
+        feature types, and whether OHE was used. The model file path is stored in
+        that config.
     """
 
     target_type = feature_types["target"]
@@ -56,6 +75,10 @@ def run_modeling_suite(
         "best_model_name": None,
         "y_pred": None,
         "y_true": None,
+        "thresholds": {},
+        "best_threshold": None,
+        "feature_types": feature_types,
+        "enable_ohe": enable_ohe,
     }
 
     if target_type == "continuous":
@@ -111,6 +134,22 @@ def run_modeling_suite(
         )
     )
 
+    if target_type == "binary":
+        thresholds = results.get("thresholds", {}) or {}
+        results["best_threshold"] = thresholds.get(results["best_model_name"])
+    else:
+        results["best_threshold"] = None
+
+    _persist_best_artifacts(
+        best_model=results["best_model_fitted"],
+        model_name=results["best_model_name"],
+        best_threshold=results["best_threshold"],
+        target_type=target_type,
+        dataset_name=dataset_name,
+        feature_types=feature_types,
+        enable_ohe=enable_ohe,
+    )
+
     return results
 
 
@@ -161,3 +200,47 @@ def collect_coefficients(
         }
         for feature_name, coef_value in zip(X_train.columns, values)
     ]
+
+
+def _persist_best_artifacts(
+    *,
+    best_model: Pipeline | None,
+    model_name: str | None,
+    best_threshold: float | None,
+    target_type: str,
+    dataset_name: str,
+    feature_types: dict[str, str] | None,
+    enable_ohe: bool | None,
+) -> None:
+    if best_model is None or model_name is None:
+        return
+
+    OUTPUTS_DIR.mkdir(exist_ok=True)
+    dataset_dir = OUTPUTS_DIR / _sanitize_name(dataset_name)
+    dataset_dir.mkdir(exist_ok=True)
+
+    safe_name = _sanitize_name(model_name)
+    model_filename = f"{safe_name}.joblib"
+
+    try:
+        joblib.dump(best_model, dataset_dir / model_filename)
+    except Exception as exc:
+        print(f"Warning: Could not save best fitted model: {exc}")
+
+    config_path = dataset_dir / "config.json"
+    payload: dict[str, object] = {
+        "model": model_name,
+        "model_file": model_filename,
+        "dataset_name": dataset_name,
+        "threshold": None,
+        "feature_types": feature_types,
+        "enable_ohe": enable_ohe,
+    }
+
+    if target_type == "binary" and best_threshold is not None and not pd.isna(best_threshold):
+        payload["threshold"] = float(best_threshold)
+
+    try:
+        config_path.write_text(json.dumps(payload, indent=2))
+    except Exception as exc:
+        print(f"Warning: Could not save model configuration: {exc}")

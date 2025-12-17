@@ -1,0 +1,26 @@
+{
+  "model": "Lasso Regression",
+  "model_file": "Lasso_Regression.joblib",
+  "dataset_name": "mental_health",
+  "threshold": null,
+  "feature_types": {
+    "lst_mean": "continuous",
+    "pm10_mean": "continuous",
+    "no2_mean": "continuous",
+    "noiseday_m": "continuous",
+    "sky_view_factor": "continuous",
+    "frontal_area_index": "continuous",
+    "aspect_ratio": "continuous",
+    "intersections": "continuous",
+    "length_n-s": "continuous",
+    "length_ne-sw": "continuous",
+    "length_primary_road": "continuous",
+    "length_secondary_road": "continuous",
+    "sex": "binary",
+    "income": "continuous",
+    "education_level": "continuous",
+    "age_bin": "continuous",
+    "target": "continuous"
+  },
+  "enable_ohe": true
+}

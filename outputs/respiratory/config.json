@@ -1,0 +1,22 @@
+{
+  "model": "SVM (Linear)",
+  "model_file": "SVM__Linear.joblib",
+  "dataset_name": "respiratory",
+  "threshold": 0.13890537553003873,
+  "feature_types": {
+    "noisenight": "continuous",
+    "frontal_area_index": "continuous",
+    "impervious_surface_cover_fraction": "continuous",
+    "length_e-w": "continuous",
+    "length_primary_road": "continuous",
+    "age_bin": "continuous",
+    "target": "binary",
+    "neighbourhood_type_G-A": "binary",
+    "neighbourhood_type_G-C": "binary",
+    "neighbourhood_type_G-E": "binary",
+    "neighbourhood_type_S-A": "binary",
+    "neighbourhood_type_S-B": "binary",
+    "neighbourhood_type_S-C": "binary"
+  },
+  "enable_ohe": true
+}

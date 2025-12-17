@@ -1,0 +1,22 @@
+{
+  "model": "Logistic Regression (Lasso)",
+  "model_file": "Logistic_Regression__Lasso.joblib",
+  "dataset_name": "cardiovascular",
+  "threshold": 0.5153095395562474,
+  "feature_types": {
+    "pm10_mean": "continuous",
+    "pm25_mean": "continuous",
+    "no2_mean": "continuous",
+    "noiseday_m": "continuous",
+    "noisenight": "continuous",
+    "sky_view_factor": "continuous",
+    "water_cover_fraction": "continuous",
+    "pervious_surface_cover_fraction": "continuous",
+    "length_se-nw": "continuous",
+    "length_railway": "continuous",
+    "income": "continuous",
+    "age_bin": "continuous",
+    "target": "binary"
+  },
+  "enable_ohe": true
+}

@@ -1,6 +1,8 @@
+import json
 from itertools import product
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
@@ -119,39 +121,79 @@ def _align_feature_space(
     return encoded
 
 
+def _sanitize_name(name: str) -> str:
+    return "".join(ch if ch.isalnum() else "_" for ch in name).strip("_")
+
+
+def _load_single_config(outputs_dir: Path, health_key: str) -> dict[str, object]:
+    candidate = outputs_dir / _sanitize_name(health_key) / "config.json"
+    if not candidate.exists():
+        return {}
+
+    try:
+        payload = json.loads(candidate.read_text())
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return {}
+
+def _load_model_from_config(outputs_dir: Path, config: dict[str, object], health_key: str) -> Pipeline | None:
+    model_file = config.get("model_file") if isinstance(config, dict) else None
+    if not model_file:
+        return None
+
+    candidate = outputs_dir / _sanitize_name(health_key) / str(model_file)
+    if not candidate.exists():
+        return None
+
+    try:
+        return joblib.load(candidate)
+    except Exception:
+        return None
+
+
 def infer_neighborhood_health_risks(
-    best_models: dict[str, Pipeline],
+    best_models: dict[str, Pipeline] | None,
     feature_types_map: dict[str, dict[str, str]],
     morph_csv_path: str | Path = Path("data/morphology_data_cleaned.csv"),
-    socio_config: dict[str, list] = SOCIO_DEMOGRAPHIC_VALUES,
     *,
     enable_ohe: bool = True,
+    outputs_dir: str | Path = Path("outputs"),
 ) -> dict[str, pd.DataFrame]:
     """Score health risks per neighborhood across socio-demographic combinations.
 
     Args:
         best_models: Mapping from health category (e.g., "mental_health") to fitted estimator.
+            If None, each model is loaded on demand using that category's config file.
         feature_types_map: Mapping from health category to feature_types dict used in training.
         morph_csv_path: Path to the neighborhoods CSV (cleaned morphology).
-        socio_config: Dict of socio-demographic feature -> list of possible values.
         enable_ohe: Whether to apply one-hot encoding during feature alignment (ablation toggle).
+        outputs_dir: Directory containing persisted best models and configuration files.
 
     Returns:
         Dict[str, pd.DataFrame]: For each health category, a dataframe containing
         neighborhood id, socio-demographic combination, and the predicted risk column.
     """
 
-    expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=socio_config)
+    outputs_dir = Path(outputs_dir)
+    outputs_dir.mkdir(exist_ok=True)
+
+    expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=SOCIO_DEMOGRAPHIC_VALUES)
     processed = _preprocess_for_inference(expanded)
 
-    socio_cols = list(socio_config.keys())
+    socio_cols = list(SOCIO_DEMOGRAPHIC_VALUES.keys())
     outputs: dict[str, pd.DataFrame] = {}
 
-    for health_key, model in best_models.items():
+    for health_key in feature_types_map.keys():
+        config = _load_single_config(outputs_dir, health_key)
+
+        model = (best_models or {}).get(health_key)
+        if model is None:
+            model = _load_model_from_config(outputs_dir, config, health_key)
         if model is None:
             continue
 
-        feature_types = feature_types_map.get(health_key)
+        feature_types = feature_types_map.get(health_key) or config.get("feature_types")
         if not feature_types:
             continue
 
@@ -162,7 +204,7 @@ def infer_neighborhood_health_risks(
             processed,
             expected_features=expected_features,
             feature_types=feature_types,
-            enable_ohe=enable_ohe,
+            enable_ohe=config.get("enable_ohe", enable_ohe),
         )
 
         scores = _predict_scores(model, aligned, target_type=target_type)
