@@ -16,8 +16,8 @@ from src.utils.prediction import infer_neighborhood_health_risks
 csv_path = project_root / "data" / "morphology_data_cleaned.csv"
 outputs_dir = project_root / "outputs"
 health_risks = infer_neighborhood_health_risks(
-    morph_csv_path = csv_path,
-    outputs_dir = outputs_dir,
+    morph_csv_path=csv_path,
+    outputs_dir=outputs_dir,
 )
 
 for name, df_risk in health_risks.items():
@@ -77,4 +77,3 @@ for col in risk_cols:
 
     print("\nPer-typology risk with zscore: ")
     print(df.sort_values("risk", ascending=False)[["typology", "risk", "zscore"]])
-

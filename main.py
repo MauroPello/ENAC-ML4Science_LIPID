@@ -282,9 +282,7 @@ for name, dataset_with_info in datasets.items():
 
     if vif_df is not None and vif_df.empty is False:
         print(f"\nTest: VIF")
-        print(
-            vif_df.drop(columns=["p_value"], errors="ignore").reset_index(drop=True)
-        )
+        print(vif_df.drop(columns=["p_value"], errors="ignore").reset_index(drop=True))
 
 print()
 

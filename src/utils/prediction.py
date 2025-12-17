@@ -167,7 +167,10 @@ def _load_single_config(outputs_dir: Path, health_key: str) -> dict[str, object]
     except Exception:
         return {}
 
-def _load_model_from_config(outputs_dir: Path, config: dict[str, object], health_key: str) -> Pipeline | None:
+
+def _load_model_from_config(
+    outputs_dir: Path, config: dict[str, object], health_key: str
+) -> Pipeline | None:
     model_file = config.get("model_file") if isinstance(config, dict) else None
     if not model_file:
         return None
@@ -226,7 +229,9 @@ def infer_neighborhood_health_risks(
     best_models = best_models or {}
     feature_types_map = feature_types_map or {}
 
-    expanded = _expand_neighborhood_grid(morph_csv_path, socio_config=SOCIO_DEMOGRAPHIC_VALUES)
+    expanded = _expand_neighborhood_grid(
+        morph_csv_path, socio_config=SOCIO_DEMOGRAPHIC_VALUES
+    )
     processed = _preprocess_for_inference(expanded)
 
     socio_cols = list(SOCIO_DEMOGRAPHIC_VALUES.keys())

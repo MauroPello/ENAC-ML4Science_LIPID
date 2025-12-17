@@ -237,7 +237,11 @@ def _persist_best_artifacts(
         "enable_ohe": enable_ohe,
     }
 
-    if target_type == "binary" and best_threshold is not None and not pd.isna(best_threshold):
+    if (
+        target_type == "binary"
+        and best_threshold is not None
+        and not pd.isna(best_threshold)
+    ):
         payload["threshold"] = float(best_threshold)
 
     try:
