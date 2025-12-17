@@ -1,8 +1,8 @@
 {
-  "model": "SVM (Linear)",
-  "model_file": "SVM__Linear.joblib",
+  "model": "Logistic Regression (Ridge)",
+  "model_file": "Logistic_Regression__Ridge.joblib",
   "dataset_name": "respiratory",
-  "threshold": 0.13890537553003873,
+  "threshold": 0.4430000652294497,
   "feature_types": {
     "noisenight": "continuous",
     "frontal_area_index": "continuous",
