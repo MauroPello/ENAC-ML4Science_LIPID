@@ -73,8 +73,6 @@ def run_modeling_suite(
         "best_model_fitted": None,
         "best_params": None,
         "best_model_name": None,
-        "y_pred": None,
-        "y_true": None,
         "thresholds": {},
         "best_threshold": None,
         "feature_types": feature_types,

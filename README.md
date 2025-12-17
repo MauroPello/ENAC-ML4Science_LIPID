@@ -24,7 +24,6 @@ python -m ipykernel install --user --name mlenv
 	- `data/morphology_data_cleaned.csv`: cleaned morphology per neighborhood (real, post-processed).
 	- `data/morphology_data_integrated.csv`: integrated morphology/environment view (real and raw; used by unsupervised analysis).
 	- `data/synthetic_health_data.xlsx`: synthetic health workbook used for demonstration when real health data is unavailable.
-	- `data/ablation/*`: saved model predictions from ablation runs (classification targets).
 - Default preprocessing expects two real sources:
 	1) Morphology CSV with a `neighborhood_id` column (or `id`, auto-renamed) containing the features listed in [src/feature_config.py](src/feature_config.py).
 	2) Health Excel workbook with sheets:
@@ -53,7 +52,7 @@ python main.py
 ## Running the analyses
 - **Supervised (core)**: `main.ipynb` - end-to-end load → preprocess → target aggregation → model search (classification/regression) → saving results.
 - **Unsupervised morphology–environment**: `notebooks/unsupervised_analysis.ipynb` using `load_and_split_data` from [src/unsupervised/data_loader.py](src/unsupervised/data_loader.py).
-- **Ablation studies**: `notebooks/ablation_study/*.ipynb` plus their prediction CSVs under `data/ablation/`.
+- **Ablation studies**: `notebooks/ablation_study/*.ipynb`.
 - To run: open the notebook in VS Code/Jupyter, select the `mlenv` kernel, and execute top to bottom. There is no CLI wrapper; notebooks orchestrate calls into the modules.
 
 ## Pipeline highlights (supervised)
@@ -117,7 +116,6 @@ python main.py
 	4) Keep `refine_hyperparameters` toggled to leverage the two-pass search automatically for the new model.
 
 ## Outputs and artifacts
-- Ablation prediction files: `data/ablation/<encoding>/<target>_y_test_predictions.csv` for quick comparison.
 - Unsupervised outputs: produced in notebook cells (UMAP/cluster plots) using `notebooks/unsupervised_analysis.ipynb`.
 - Best fitted model per dataset: saved as `outputs/<dataset>/<model>.joblib` with metadata in `outputs/<dataset>/config.json` (model name, fitted file, optional threshold, feature types, and OHE flag) for notebook or batch inference.
 - Inference helper: `infer_neighborhood_health_risks` in [src/utils/prediction.py](src/utils/prediction.py) scores all socio-demographic combinations per neighborhood and returns dataframes you can export.
