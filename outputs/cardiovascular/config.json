@@ -1,22 +1,30 @@
 {
-  "model": "Logistic Regression (Lasso)",
-  "model_file": "Logistic_Regression__Lasso.joblib",
+  "model": "SVM (RBF)",
+  "model_file": "SVM__RBF.joblib",
   "dataset_name": "cardiovascular",
-  "threshold": 0.5139422386630265,
+  "threshold": 0.10464687589133397,
   "feature_types": {
+    "lst_mean": "continuous",
+    "solar_summ": "continuous",
     "pm10_mean": "continuous",
     "pm25_mean": "continuous",
     "no2_mean": "continuous",
-    "noiseday_m": "continuous",
-    "noisenight": "continuous",
-    "sky_view_factor": "continuous",
+    "building_height": "continuous",
     "water_cover_fraction": "continuous",
-    "pervious_surface_cover_fraction": "continuous",
+    "intersections": "continuous",
+    "length_n-s": "continuous",
+    "length_ne-sw": "continuous",
     "length_se-nw": "continuous",
+    "length_secondary_road": "continuous",
     "length_railway": "continuous",
     "income": "continuous",
+    "education_level": "continuous",
     "age_bin": "continuous",
-    "target": "binary"
+    "target": "binary",
+    "neighbourhood_type_G-C": "binary",
+    "neighbourhood_type_G-D": "binary",
+    "neighbourhood_type_G-E": "binary",
+    "neighbourhood_type_S-C": "binary"
   },
   "enable_ohe": true
 }

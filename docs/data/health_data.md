@@ -32,7 +32,7 @@ This description is High-level and is inspired from the Excel file that is found
 
 **Mental health**
 
-* `GHQ12_score` (int [0, 12])
+* `GHQ12_case` (int [0, 12])
 
 **Respiratory**
 

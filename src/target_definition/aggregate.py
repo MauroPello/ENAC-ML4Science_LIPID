@@ -43,57 +43,63 @@ def process_sleep_disorder_target(
     target_column: str,
 ) -> pd.DataFrame:
     """
-    Process sleep disorder features into a continuous risk score (0-1).
-    Duration risk is modeled as a Gaussian centered on age-specific expected sleep hours
-    (from EXPECTED_HOURS) with a stddev of 2 hours. 'points_sleep_deprivation' is
-    included as an additional risk factor. Presence of sleep disorder during the hot
-    months increases the baseline risk.
+    Process sleep-related features into a continuous sleep-disorder risk score in [0, 1].
+
+    Calculation details:
+    - `duration_risk`: models deviation from age-expected sleep hours using a
+      Gaussian-shaped curve (stddev = 2 hours). Larger deviations -> larger risk.
+    - `current_floor`: a baseline risk computed as the elementwise maximum of
+      (a) `sleep_disorder_hot * HOT_MONTHS_DISORDER_FLOOR` and
+      (b) `points_sleep_deprivation * SLEEP_DISORDER_FLOOR`.
+    - Final score: `current_floor + (1 - current_floor) * duration_risk`, clipped
+      to the [0, 1] range.
+
+    Required/used columns in `df` (if missing, defaults are used where sensible):
+    - `sleeping_hours`: numeric or coercible to numeric (hours slept).
+    - `age_bin`: used to look up expected hours via `EXPECTED_HOURS`; missing
+      values default to 8 expected hours.
+    - `sleep_disorder_hot`: indicator (0/1) for sleep disorder in hot months.
+    - `points_sleep_deprivation`: numeric deprivation score (0-1 expected).
 
     Args:
         df (pd.DataFrame): Input dataframe.
-        target_column (str): Name of the output column.
+        target_column (str): Name of the output column to create.
 
     Returns:
-        pd.DataFrame: Dataframe with the new target column.
+        pd.DataFrame: DataFrame with the new target column containing floats in [0,1].
     """
     result = df.copy()
+    hours = pd.to_numeric(result.get("sleeping_hours", pd.Series(index=result.index)), errors="coerce")
 
-    hours = pd.to_numeric(result["sleeping_hours"], errors="coerce")
-    expected_hours = result.get("age_bin")
-    expected_hours = expected_hours.map(EXPECTED_HOURS).fillna(8)
+    # Safely obtain expected hours from age_bin; default to 8 if missing or unmapped
+    raw_age_bin = result.get("age_bin")
+    if raw_age_bin is None:
+        expected_hours = pd.Series(np.nan, index=result.index)
+    else:
+        expected_hours = raw_age_bin.map(EXPECTED_HOURS).astype(float)
 
     std_hours = 2.0
-    duration_risk = 1 - np.exp(-((hours - expected_hours) ** 2) / (2 * std_hours**2))
+    duration_risk = 1 - np.exp(-((hours - expected_hours) ** 2) / (2 * std_hours ** 2))
     duration_risk = duration_risk.fillna(0)
 
-    # bedtime_rads = (result["bedtime_hour"] / 24.0) * 2 * np.pi
-    # optimal_rads = (23.0 / 24.0) * 2 * np.pi
-    # circadian_risk = (1 - np.cos(bedtime_rads - optimal_rads)) / 2.0
+    HOT_MONTHS_DISORDER_FLOOR = 0.5
+    sd_hot = result.get("sleep_disorder_hot", pd.Series(0, index=result.index)).fillna(0).astype(float)
+    current_floor = sd_hot * HOT_MONTHS_DISORDER_FLOOR
 
-    deprivation_risk = (
-        result["points_sleep_deprivation"] / result["points_sleep_deprivation"].max()
-    )
+    SLEEP_DISORDER_FLOOR = 0.7
+    deprivation_risk = result.get("points_sleep_deprivation", pd.Series(0, index=result.index)).fillna(0).astype(float)
 
-    behavioral_risk = (
-        # (duration_risk * 0.4) + (circadian_risk * 0.3) + (deprivation_risk * 0.3)
-        (duration_risk * 0.4)
-        + (deprivation_risk * 0.3)
-    )
+    # elementwise maximum between the two baseline contributions
+    current_floor = current_floor.combine(deprivation_risk * SLEEP_DISORDER_FLOOR, np.maximum)
 
-    DISORDER_FLOOR = 0.8
-    current_floor = result["sleep_disorder_hot"] * DISORDER_FLOOR
-
-    result[target_column] = current_floor + ((1 - current_floor) * behavioral_risk)
+    score = current_floor + ((1 - current_floor) * duration_risk)
+    result[target_column] = score.clip(0.0, 1.0)
     return result
 
 
 def process_mental_health_target(df: pd.DataFrame, target_column: str) -> pd.DataFrame:
     """
-    Process mental health features into a continuous risk score (0-1).
-    The threshold (4) represents the "tipping point" (0.5 risk).
-
-    Note: The threshold of 4 for GHQ scoring has ~80% sensitivity and specificity
-    for detecting psychiatric cases (Goldberg et al., 1997).
+    Process the mental health feature GHQ12_case.
 
     Args:
         df (pd.DataFrame): Input dataframe.
@@ -102,11 +108,9 @@ def process_mental_health_target(df: pd.DataFrame, target_column: str) -> pd.Dat
     Returns:
         pd.DataFrame: Dataframe with the new target column.
     """
-    steepness, threshold = 0.8, 4.0
     result = df.copy()
-    ghq_score = df[MENTAL_HEALTH_FEATURES[0]]
-    result[target_column] = 1 / (1 + np.exp(-steepness * (ghq_score - threshold)))
-
+    # If any respiratory feature is 1, set target to 1, else 0
+    result[target_column] = result[MENTAL_HEALTH_FEATURES].fillna(0).max(axis=1)
     return result
 
 
@@ -162,7 +166,7 @@ def aggregate_health_targets(
             columns=POSSIBLE_TARGET_FEATURES
         )
     elif target_feature == "mental_health":
-        feature_types["target"] = "continuous"
+        feature_types["target"] = "binary"
         dataset = process_mental_health_target(df, "target").drop(
             columns=POSSIBLE_TARGET_FEATURES
         )

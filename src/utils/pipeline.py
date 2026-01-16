@@ -41,7 +41,7 @@ def load_combined_dataset(
     health_df = pd.merge(
         health_df_soc,
         health_df_clin,
-        on=["participant_id", "neighborhood_id"],
+        on="participant_id",
         how="inner",
     )
 
@@ -223,6 +223,52 @@ def summarize_continuous_stats(
     return pd.DataFrame(rows)
 
 
+def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+    """Impute missing values using feature types from feature_config.
+
+    Continuous/ordinal features are imputed with the median, categorical
+    features with the mode (or "Unknown"), and binary features with the
+    mode (or 0 if no mode is available).
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+
+    Returns:
+        pd.DataFrame: Dataframe with imputed missing values.
+    """
+
+    df = df.copy()
+
+    na_counts = df.isna().sum()
+    na_counts = na_counts[na_counts > 0]
+    if na_counts.empty:
+        return df
+
+    print("NaN Values per Feature:")
+    print(na_counts)
+
+    continuous_cols = [c for c in ALL_CONTINUOUS_FEATURES if c in df.columns]
+    categorical_cols = [c for c in ALL_CATEGORICAL_FEATURES if c in df.columns]
+    binary_cols = [c for c in ALL_BINARY_FEATURES if c in df.columns]
+
+    for column in continuous_cols:
+        series = pd.to_numeric(df[column], errors="coerce")
+        fill_value = float(series.median())
+        df[column] = series.fillna(fill_value)
+
+    for column in categorical_cols:
+        mode = df[column].mode(dropna=True)
+        fill_value = mode.iloc[0] if not mode.empty else "Unknown"
+        df[column] = df[column].fillna(fill_value)
+
+    for column in binary_cols:
+        mode = df[column].mode(dropna=True)
+        fill_value = mode.iloc[0]
+        df[column] = df[column].fillna(fill_value)
+
+    return df
+
+
 def ohe_features(
     df: pd.DataFrame,
     feature_types: dict,
@@ -293,6 +339,7 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     1. Assign fixed age bins
     2. Encode ordinal features
     3. Process additional features
+    4. Impute missing values
 
     Args:
         df (pd.DataFrame): The input dataframe to process.
@@ -304,4 +351,5 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     processed_df = encode_ordinal_features(processed_df)
     processed_df = process_additional_features(processed_df)
     processed_df = drop_extra_features(processed_df)
+    processed_df = impute_missing_values(processed_df)
     return processed_df

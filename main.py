@@ -119,7 +119,9 @@ HYPERPARAMETER_REFINING = True
 print("Combining morphology dataset with the health dataset")
 df = load_combined_dataset(
     data_path / "morphology_data_cleaned.csv",
-    data_path / "health_data_synthetic.xlsx",
+    data_path / "health_data_final.xlsx",
+    socio_sheet="SocioDemograph",
+    clinical_sheet="HEALTH"
 )
 df = run_preprocessing_pipeline(df)
 print(f"Final dataset shape: {df.shape}")

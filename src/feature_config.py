@@ -45,10 +45,8 @@ ALL_CONTINUOUS_FEATURES: list[str] = [
     "no2_mean",
     "noiseday_m",
     "noisenight",
-    "points_sleep_deprivation",
     "sleeping_hours",
     # "bedtime_hour", removed for now
-    "GHQ12_score",
     # ordinal encoded features
     "income",
     "education_level",
@@ -78,33 +76,37 @@ ALL_CATEGORICAL_FEATURES: list[str] = [
 ]
 
 ALL_BINARY_FEATURES: list[str] = [
-    "sex",
-    "heart_failure",
-    "heart_rhythm",
+    # "sex",
+    # "heart_failure",
+    # "heart_rhythm",
+    # "d_breath_respiratory",
+    # "d_breath_asthma",
+    "GHQ12_case",
+    "points_sleep_deprivation",
     "sleep_disorder_hot",
-    "d_breath_respiratory",
-    "d_breath_asthma",
 ]
 
 CARDIOVASCULAR_FEATURES: list[str] = [
-    "heart_failure",
-    "heart_rhythm",
+    # "heart_failure",
+    # "heart_rhythm",
+    "i_united_heart", # use already unified outcome
 ]
 
 SLEEP_DISORDER_FEATURES: list[str] = [
     "points_sleep_deprivation",
     "sleeping_hours",
     "sleep_disorder_hot",
-    "bedtime_hour",
+    # "bedtime_hour",
 ]
 
 MENTAL_HEALTH_FEATURES: list[str] = [
-    "GHQ12_score",
+    "GHQ12_case",
 ]
 
 RESPIRATORY_FEATURES: list[str] = [
-    "d_breath_respiratory",
-    "d_breath_asthma",
+    # "d_breath_respiratory",
+    # "d_breath_asthma",
+    "i_united_breath", # use already unified outcome
 ]
 
 POSSIBLE_TARGET_FEATURES: list[str] = (
