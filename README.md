@@ -23,7 +23,7 @@ python -m ipykernel install --user --name mlenv
 - Data under `data/`:
 	- `data/morphology_data_cleaned.csv`: cleaned morphology per neighborhood (real, post-processed).
 	- `data/morphology_data_integrated.csv`: integrated morphology/environment view (real and raw; used by unsupervised analysis).
-	- `data/synthetic_health_data.xlsx`: synthetic health workbook used for demonstration when real health data is unavailable.
+	- `data/health_data_synthetic.xlsx`: synthetic health workbook used for demonstration when real health data is unavailable.
 - Default preprocessing expects two real sources:
 	1) Morphology CSV with a `neighborhood_id` column (or `id`, auto-renamed) containing the features listed in [src/feature_config.py](src/feature_config.py).
 	2) Health Excel workbook with sheets:
