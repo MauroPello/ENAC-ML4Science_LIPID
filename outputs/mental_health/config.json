@@ -1,10 +1,11 @@
 {
-  "model": "Logistic Regression (Ridge)",
-  "model_file": "Logistic_Regression__Ridge.joblib",
+  "model": "Random Forest Classifier",
+  "model_file": "Random_Forest_Classifier.joblib",
   "dataset_name": "mental_health",
-  "threshold": 0.46258802011394534,
+  "threshold": 0.011978746672722336,
   "feature_types": {
     "lst_mean": "continuous",
+    "pm10_mean": "continuous",
     "pm25_mean": "continuous",
     "noiseday_m": "continuous",
     "building_height": "continuous",
@@ -24,7 +25,7 @@
     "typology_A": "binary",
     "typology_C": "binary",
     "typology_E": "binary",
-    "typology_F": "binary",
+    "typology_G": "binary",
     "typology_I": "binary"
   },
   "enable_ohe": true

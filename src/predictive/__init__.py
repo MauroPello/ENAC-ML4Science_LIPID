@@ -59,7 +59,7 @@ def run_modeling_suite(
     target_type = feature_types["target"]
     X = features.drop(columns=[target_feature])
     X = X.reset_index(drop=True)
-    y = features[target_feature]
+    y = features[target_feature].reset_index(drop=True)
 
     results: dict[str, object] = {
         "target_type": target_type,

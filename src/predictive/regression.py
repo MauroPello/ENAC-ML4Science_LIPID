@@ -44,8 +44,8 @@ def run_regression_models(
         Dict[str, object]: A dictionary containing regression results and artifacts.
     """
     # 1. Clean Target
-    y_numeric = pd.to_numeric(y, errors="coerce")
-    valid_mask = y_numeric.notna()
+    y_numeric = pd.to_numeric(y, errors="coerce").reset_index(drop=True)
+    valid_mask = y_numeric.notna().to_numpy()
     X_reg = X.loc[valid_mask]
     y_reg = y_numeric.loc[valid_mask]
 

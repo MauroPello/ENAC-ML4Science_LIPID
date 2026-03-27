@@ -223,7 +223,11 @@ def summarize_continuous_stats(
     return pd.DataFrame(rows)
 
 
-def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+def impute_missing_values(
+    df: pd.DataFrame,
+    *,
+    exclude_columns: Iterable[str] = (),
+) -> pd.DataFrame:
     """Impute missing values using feature types from feature_config.
 
     Continuous/ordinal features are imputed with the median, categorical
@@ -232,6 +236,9 @@ def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
 
     Args:
         df (pd.DataFrame): Input dataframe.
+        exclude_columns (Iterable[str]): Columns that should keep missing values
+            untouched. Useful when target source columns must stay null until
+            target aggregation happens.
 
     Returns:
         pd.DataFrame: Dataframe with imputed missing values.
@@ -247,9 +254,16 @@ def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     print("NaN Values per Feature:")
     print(na_counts)
 
-    continuous_cols = [c for c in ALL_CONTINUOUS_FEATURES if c in df.columns]
-    categorical_cols = [c for c in ALL_CATEGORICAL_FEATURES if c in df.columns]
-    binary_cols = [c for c in ALL_BINARY_FEATURES if c in df.columns]
+    excluded = set(exclude_columns)
+    continuous_cols = [
+        c for c in ALL_CONTINUOUS_FEATURES if c in df.columns and c not in excluded
+    ]
+    categorical_cols = [
+        c for c in ALL_CATEGORICAL_FEATURES if c in df.columns and c not in excluded
+    ]
+    binary_cols = [
+        c for c in ALL_BINARY_FEATURES if c in df.columns and c not in excluded
+    ]
 
     for column in continuous_cols:
         series = pd.to_numeric(df[column], errors="coerce")
@@ -331,7 +345,11 @@ def ohe_features(
     return df, feature_types
 
 
-def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+def run_preprocessing_pipeline(
+    df: pd.DataFrame,
+    *,
+    exclude_from_imputation: Iterable[str] = (),
+) -> pd.DataFrame:
     """
     Run the full data preprocessing pipeline
     It is assumed that the input dataframe has already been loaded using load_combined_dataset.
@@ -351,5 +369,7 @@ def run_preprocessing_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     processed_df = encode_ordinal_features(processed_df)
     processed_df = process_additional_features(processed_df)
     processed_df = drop_extra_features(processed_df)
-    processed_df = impute_missing_values(processed_df)
+    processed_df = impute_missing_values(
+        processed_df, exclude_columns=exclude_from_imputation
+    )
     return processed_df

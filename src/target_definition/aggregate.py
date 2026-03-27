@@ -18,6 +18,7 @@ from src.feature_config import (
     MENTAL_HEALTH_FEATURES,
     RESPIRATORY_FEATURES,
     POSSIBLE_TARGET_FEATURES,
+    SLEEP_DISORDER_FEATURES,
 )
 
 
@@ -32,10 +33,9 @@ def process_cardiovascular_target(df: pd.DataFrame, target_column: str) -> pd.Da
     Returns:
         pd.DataFrame: DataFrame with the aggregated cardiovascular target feature in the specified target column.
     """
-    result = df.copy()
     # If any cardiovascular feature is 1, set target to 1, else 0
-    result[target_column] = result[CARDIOVASCULAR_FEATURES].max(axis=1)
-    return result
+    df[target_column] = df[CARDIOVASCULAR_FEATURES].max(axis=1)
+    return df
 
 
 def process_sleep_disorder_target(
@@ -68,13 +68,12 @@ def process_sleep_disorder_target(
     Returns:
         pd.DataFrame: DataFrame with the new target column containing floats in [0,1].
     """
-    result = df.copy()
-    hours = pd.to_numeric(result.get("sleeping_hours", pd.Series(index=result.index)), errors="coerce")
+    hours = pd.to_numeric(df.get("sleeping_hours", pd.Series(index=df.index)), errors="coerce")
 
     # Safely obtain expected hours from age_bin; default to 8 if missing or unmapped
-    raw_age_bin = result.get("age_bin")
+    raw_age_bin = df.get("age_bin")
     if raw_age_bin is None:
-        expected_hours = pd.Series(np.nan, index=result.index)
+        expected_hours = pd.Series(np.nan, index=df.index)
     else:
         expected_hours = raw_age_bin.map(EXPECTED_HOURS).astype(float)
 
@@ -83,18 +82,18 @@ def process_sleep_disorder_target(
     duration_risk = duration_risk.fillna(0)
 
     HOT_MONTHS_DISORDER_FLOOR = 0.5
-    sd_hot = result.get("sleep_disorder_hot", pd.Series(0, index=result.index)).fillna(0).astype(float)
+    sd_hot = df.get("sleep_disorder_hot", pd.Series(0, index=df.index)).fillna(0).astype(float)
     current_floor = sd_hot * HOT_MONTHS_DISORDER_FLOOR
 
     SLEEP_DISORDER_FLOOR = 0.7
-    deprivation_risk = result.get("points_sleep_deprivation", pd.Series(0, index=result.index)).fillna(0).astype(float)
+    deprivation_risk = df.get("points_sleep_deprivation", pd.Series(0, index=df.index)).fillna(0).astype(float)
 
     # elementwise maximum between the two baseline contributions
     current_floor = current_floor.combine(deprivation_risk * SLEEP_DISORDER_FLOOR, np.maximum)
 
     score = current_floor + ((1 - current_floor) * duration_risk)
-    result[target_column] = score.clip(0.0, 1.0)
-    return result
+    df[target_column] = score.clip(0.0, 1.0)
+    return df
 
 
 def process_mental_health_target(df: pd.DataFrame, target_column: str) -> pd.DataFrame:
@@ -108,10 +107,9 @@ def process_mental_health_target(df: pd.DataFrame, target_column: str) -> pd.Dat
     Returns:
         pd.DataFrame: Dataframe with the new target column.
     """
-    result = df.copy()
     # If any respiratory feature is 1, set target to 1, else 0
-    result[target_column] = result[MENTAL_HEALTH_FEATURES].fillna(0).max(axis=1)
-    return result
+    df[target_column] = df[MENTAL_HEALTH_FEATURES].fillna(0).max(axis=1)
+    return df
 
 
 def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataFrame:
@@ -125,14 +123,17 @@ def process_respiratory_target(df: pd.DataFrame, target_column: str) -> pd.DataF
     Returns:
         pd.DataFrame: DataFrame with the aggregated respiratory target feature in the specified target column.
     """
-    result = df.copy()
     # If any respiratory feature is 1, set target to 1, else 0
-    result[target_column] = result[RESPIRATORY_FEATURES].max(axis=1)
-    return result
+    df[target_column] = df[RESPIRATORY_FEATURES].max(axis=1)
+    return df
 
 
 def aggregate_health_targets(
-    df: pd.DataFrame, target_feature: str, feature_types: dict[str, str]
+    df: pd.DataFrame,
+    target_feature: str,
+    feature_types: dict[str, str],
+    *,
+    drop_null_target_rows: bool = False,
 ) -> dict:
     """
     Aggregate relevant health features into a single target feature.
@@ -142,12 +143,15 @@ def aggregate_health_targets(
         target_feature (str): The target health condition to aggregate.
             Must be in ('cardiovascular', 'sleep_disorder', 'mental_health', 'respiratory').
         feature_types (dict[str, str]): Map with features as keys and their types as values.
+        drop_null_target_rows (bool): Whether to exclude rows whose aggregated
+            target is null for this dataset.
 
     Returns:
         dict: Dictionary containing:
             - 'data' (pd.DataFrame): DataFrame with the aggregated target feature.
             - 'feature_types' (dict[str, str]): Updated feature types map.
     """
+    df_copy = df.copy()
     feature_types = feature_types.copy()
     feature_types = {
         feature: type
@@ -156,23 +160,35 @@ def aggregate_health_targets(
     }
 
     if target_feature == "cardiovascular":
+        if drop_null_target_rows:
+            df_copy = df_copy.dropna(subset=CARDIOVASCULAR_FEATURES, how="all")
+
         feature_types["target"] = "binary"
-        dataset = process_cardiovascular_target(df, "target").drop(
+        dataset = process_cardiovascular_target(df_copy, "target").drop(
             columns=POSSIBLE_TARGET_FEATURES
         )
     elif target_feature == "sleep_disorder":
+        if drop_null_target_rows:
+            df_copy = df_copy.dropna(subset=SLEEP_DISORDER_FEATURES, how="all")
+
         feature_types["target"] = "continuous"
-        dataset = process_sleep_disorder_target(df, "target").drop(
+        dataset = process_sleep_disorder_target(df_copy, "target").drop(
             columns=POSSIBLE_TARGET_FEATURES
         )
     elif target_feature == "mental_health":
+        if drop_null_target_rows:
+            df_copy = df_copy.dropna(subset=MENTAL_HEALTH_FEATURES, how="all")
+
         feature_types["target"] = "binary"
-        dataset = process_mental_health_target(df, "target").drop(
+        dataset = process_mental_health_target(df_copy, "target").drop(
             columns=POSSIBLE_TARGET_FEATURES
         )
     elif target_feature == "respiratory":
+        if drop_null_target_rows:
+            df_copy = df_copy.dropna(subset=RESPIRATORY_FEATURES, how="all")
+
         feature_types["target"] = "binary"
-        dataset = process_respiratory_target(df, "target").drop(
+        dataset = process_respiratory_target(df_copy, "target").drop(
             columns=POSSIBLE_TARGET_FEATURES
         )
 

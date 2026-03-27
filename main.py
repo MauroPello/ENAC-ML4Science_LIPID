@@ -115,6 +115,7 @@ FEATURE_SELECTION = True
 STANDARD_SCALING = True
 CLASS_BALANCING = True
 HYPERPARAMETER_REFINING = True
+DROP_ROWS_WITH_NULL_TARGET = False
 
 print("Combining morphology dataset with the health dataset")
 df = load_combined_dataset(
@@ -123,7 +124,10 @@ df = load_combined_dataset(
     socio_sheet="SocioDemograph",
     clinical_sheet="HEALTH"
 )
-df = run_preprocessing_pipeline(df)
+df = run_preprocessing_pipeline(
+    df,
+    exclude_from_imputation=(POSSIBLE_TARGET_FEATURES if DROP_ROWS_WITH_NULL_TARGET else ()),
+)
 print(f"Final dataset shape: {df.shape}")
 print(df.head())
 print()
@@ -150,16 +154,28 @@ for column in df.columns:
 
 datasets = {
     "cardiovascular": aggregate_health_targets(
-        df, target_feature="cardiovascular", feature_types=all_feature_types
+        df,
+        target_feature="cardiovascular",
+        feature_types=all_feature_types,
+        drop_null_target_rows=DROP_ROWS_WITH_NULL_TARGET,
     ),
     "mental_health": aggregate_health_targets(
-        df, target_feature="mental_health", feature_types=all_feature_types
+        df,
+        target_feature="mental_health",
+        feature_types=all_feature_types,
+        drop_null_target_rows=DROP_ROWS_WITH_NULL_TARGET,
     ),
     "sleep_disorder": aggregate_health_targets(
-        df, target_feature="sleep_disorder", feature_types=all_feature_types
+        df,
+        target_feature="sleep_disorder",
+        feature_types=all_feature_types,
+        drop_null_target_rows=DROP_ROWS_WITH_NULL_TARGET,
     ),
     "respiratory": aggregate_health_targets(
-        df, target_feature="respiratory", feature_types=all_feature_types
+        df,
+        target_feature="respiratory",
+        feature_types=all_feature_types,
+        drop_null_target_rows=DROP_ROWS_WITH_NULL_TARGET,
     ),
 }
 
