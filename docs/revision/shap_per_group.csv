@@ -1,0 +1,13 @@
+target,model,group,n_features,mean_abs_shap,share_of_total
+cardiovascular,SVM (RBF),Sociodemographic,3,0.051578428998237315,0.6446942608556709
+cardiovascular,SVM (RBF),Morphology,8,0.015980002920623192,0.1997388515213348
+cardiovascular,SVM (RBF),Environmental quality,5,0.010963520741239774,0.13703633549775132
+cardiovascular,SVM (RBF),Neighbourhood type,4,0.0014825271840041235,0.018530552125242926
+mental_health,Random Forest Classifier,Morphology,12,0.14892416245109663,0.5445608900588965
+mental_health,Random Forest Classifier,Sociodemographic,1,0.07674918849145333,0.2806435551378592
+mental_health,Random Forest Classifier,Environmental quality,4,0.04403472300259187,0.16101878672416742
+mental_health,Random Forest Classifier,Typology,5,0.0037676110879678155,0.013776768079076835
+respiratory,SVM (Linear),Sociodemographic,3,0.008042940949168548,0.4134200436241797
+respiratory,SVM (Linear),Environmental quality,8,0.006128337408273163,0.31500635584473563
+respiratory,SVM (Linear),Morphology,8,0.004505810236888031,0.23160586114822768
+respiratory,SVM (Linear),Typology,3,0.0007775582550620106,0.039967739382857054

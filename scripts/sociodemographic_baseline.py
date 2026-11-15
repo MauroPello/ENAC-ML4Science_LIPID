@@ -17,38 +17,32 @@ because it is fitted from the training data rather than a free hyper-parameter.
 The committed models in outputs/ are only read, never overwritten.
 
 Usage:  python scripts/sociodemographic_baseline.py
-Output: results/sociodemographic_baseline_<arch>.csv
+The default run stops if a full-model control does not reproduce the published
+metrics. --allow-mismatch writes a separately labelled platform sensitivity table.
+Output: results/sociodemographic_baseline_<arch>[_sensitivity].csv and run metadata.
 """
 
 from __future__ import annotations
 
+import argparse
 import platform
-import warnings
 
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.metrics import f1_score, roc_auc_score
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from sklearn.pipeline import Pipeline
 
 import _rebuild as R
 from src.predictive.classification import (
     _apply_threshold,
-    _find_best_threshold,
     _safe_prediction_scores,
     run_classification_models,
 )
 from src.utils.prediction import build_scaler_step
 
-warnings.filterwarnings("ignore")
-
 N_BOOT = 2000
-PUBLISHED = {  # test-set values printed in the committed main.ipynb
-    "cardiovascular": (0.322275, 0.757119),
-    "mental_health": (0.414239, 0.586800),
-    "respiratory": (0.145985, 0.674908),
-}
 
 
 def _fit_eval(pipe, X, y, idx_train, idx_test):
@@ -56,8 +50,21 @@ def _fit_eval(pipe, X, y, idx_train, idx_test):
     X_tr, X_te = X.iloc[idx_train], X.iloc[idx_test]
     y_tr, y_te = y[idx_train], y[idx_test]
     pipe.fit(X_tr, y_tr)
-    threshold = _find_best_threshold(pipe, X_tr, y_tr, cv)
+    # Same quantile search/tie rule as the original helper, but CV errors must
+    # propagate instead of silently falling back to a threshold of 0.5.
+    training_scores = cross_val_predict(
+        pipe, X_tr, y_tr, cv=cv, method="predict_proba", n_jobs=-1
+    )[:, 1]
+    if not np.isfinite(training_scores).all():
+        raise RuntimeError("Non-finite out-of-fold training probabilities")
+    candidates = np.unique(np.quantile(training_scores, np.linspace(0, 1, 101)))
+    threshold = float(max(
+        candidates,
+        key=lambda t: f1_score(y_tr, _apply_threshold(training_scores, t), zero_division=0),
+    ))
     scores = _safe_prediction_scores(pipe, X_te)
+    if scores is None or not np.isfinite(scores).all():
+        raise RuntimeError("Missing or non-finite test prediction scores")
     preds = _apply_threshold(scores, threshold)
     return {
         "F1": f1_score(y_te, preds, zero_division=0),
@@ -95,10 +102,14 @@ def _paired_bootstrap(y_te, full, base, rng):
         aucb = roc_auc_score(y_te[i], base["_scores"][i])
         for k, v in zip(s, (f1f - f1b, aucf - aucb, f1f, f1b, aucf, aucb)):
             s[k].append(v)
-    return {k: tuple(np.round(np.percentile(v, [2.5, 97.5]), 3)) for k, v in s.items()}
+    return {k: tuple(float(x) for x in np.round(np.percentile(v, [2.5, 97.5]), 3)) for k, v in s.items()}
 
 
-def main() -> None:
+def _interval_fields(prefix, bounds):
+    return {f"{prefix}_95CI_low": bounds[0], f"{prefix}_95CI_high": bounds[1]}
+
+
+def main(*, allow_mismatch=False) -> None:
     arch = platform.machine()
     datasets = R.build_datasets()
     rows = []
@@ -114,6 +125,9 @@ def main() -> None:
         assert set(R._feature_types_for(socio_X).values()) == {"continuous"}
 
         full = _fit_eval(clone(committed), X, y, idx_train, idx_test)
+        matches_published = R.check_published_metrics(
+            name, full["F1"], full["ROC_AUC"], allow_mismatch=allow_mismatch
+        )
         base = _fit_eval(
             _socio_pipeline(committed, socio_types), socio_X, y, idx_train, idx_test
         )
@@ -132,7 +146,6 @@ def main() -> None:
         retuned = retuned_res.loc[retuned_res["model"] == cfg["model"]].iloc[0]
 
         boot = _paired_bootstrap(y_te, full, base, np.random.default_rng(R.RANDOM_STATE))
-        pub_f1, pub_auc = PUBLISHED[name]
         hp = {
             k: v
             for k, v in committed.named_steps["model"].get_params().items()
@@ -153,12 +166,9 @@ def main() -> None:
                 "ROC_AUC": full["ROC_AUC"],
                 "threshold": full["threshold"],
                 "hyperparameters": hp,
-                "F1_95CI": boot["f1_full"],
-                "ROC_AUC_95CI": boot["auc_full"],
-                "matches_published": bool(
-                    abs(full["F1"] - pub_f1) < 1e-6
-                    and abs(full["ROC_AUC"] - pub_auc) < 1e-6
-                ),
+                **_interval_fields("F1", boot["f1_full"]),
+                **_interval_fields("ROC_AUC", boot["auc_full"]),
+                "matches_published": matches_published,
             },
             {
                 **common,
@@ -168,10 +178,10 @@ def main() -> None:
                 "ROC_AUC": base["ROC_AUC"],
                 "threshold": base["threshold"],
                 "hyperparameters": hp,
-                "F1_95CI": boot["f1_base"],
-                "ROC_AUC_95CI": boot["auc_base"],
-                "delta_F1_full_minus_socio_95CI": boot["d_f1"],
-                "delta_AUC_full_minus_socio_95CI": boot["d_auc"],
+                **_interval_fields("F1", boot["f1_base"]),
+                **_interval_fields("ROC_AUC", boot["auc_base"]),
+                **_interval_fields("delta_F1_full_minus_socio", boot["d_f1"]),
+                **_interval_fields("delta_AUC_full_minus_socio", boot["d_auc"]),
             },
             {
                 **common,
@@ -186,8 +196,15 @@ def main() -> None:
 
     out = pd.DataFrame(rows)
     R.RESULTS_DIR.mkdir(exist_ok=True)
-    path = R.RESULTS_DIR / f"sociodemographic_baseline_{arch}.csv"
+    suffix = "_sensitivity" if allow_mismatch else ""
+    path = R.RESULTS_DIR / f"sociodemographic_baseline_{arch}{suffix}.csv"
     out.to_csv(path, index=False)
+    R.write_run_metadata(
+        path.with_suffix(".json"), datasets,
+        allow_mismatch=allow_mismatch, n_bootstrap=N_BOOT,
+        test_size=R.TEST_SIZE, split_seed=R.RANDOM_STATE,
+        threshold_selection="F1-maximising quantile search on five-fold training OOF probabilities",
+    )
     with pd.option_context("display.width", 250, "display.max_columns", 20, "display.max_colwidth", 60):
         print(f"[{arch}]")
         print(out.drop(columns=["hyperparameters"]).round(4).to_string(index=False))
@@ -195,4 +212,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--allow-mismatch", action="store_true",
+        help="Allow published-metric mismatches; export a labelled sensitivity table.",
+    )
+    main(allow_mismatch=parser.parse_args().allow_mismatch)
