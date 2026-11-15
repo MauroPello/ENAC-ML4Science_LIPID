@@ -21,7 +21,7 @@ python -m ipykernel install --user --name mlenv
 
 ## Co-author revision analyses
 
-Verified SHAP values, sociodemographic baselines, screening sensitivity, methodological confirmations, and reproduction instructions are in [docs/revision](docs/revision/README.md). These analyses use the original saved models and private health workbook.
+Verified SHAP values, sociodemographic baselines, and reproduction instructions are in [docs/revision](docs/revision/README.md). These analyses use the original saved models and private health workbook.
 
 ## Data inputs
 - Data under `data/`:

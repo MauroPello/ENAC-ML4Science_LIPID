@@ -14,11 +14,7 @@
   "morphology_sha256": "1f8321acccfbe788b17a0cabafd383c7547889341a70eee6f948c16db15dc516",
   "script_sha256": {
     "_rebuild.py": "49482df8656ba78bd7c386a2a7de75a37408a8cc68a2e7b82af3a7ce39218aa4",
-    "inference.py": "5674206c4f4c38583c0845de610e5481c9c363debec980f9be53b1138de749e2",
-    "screening_leakage_check.py": "23626ce38c606cd7437f2f5eb460ee0c8a944b056b429c66b16589ca261abcc6",
-    "shap_analysis.py": "5b23ffa1ee08936d539a243e2b4120f7da2186938180e71f48c8554624b55b09",
-    "shap_sensitivity.py": "3224269b7d1fe230470532a4c2d1d8f133bca34f9f839d5e09fa04534993232f",
-    "sociodemographic_baseline.py": "54153bf66ad4aec8856f885f7ec93c3a97a663b7d253fd52e8e896e70459c7d0"
+    "shap_analysis.py": "5b23ffa1ee08936d539a243e2b4120f7da2186938180e71f48c8554624b55b09"
   },
   "datasets": {
     "cardiovascular": {
