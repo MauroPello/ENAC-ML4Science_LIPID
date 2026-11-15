@@ -1,0 +1,96 @@
+{
+  "workbook_sha256": "e3b9a6e7781b6e4adcd5e32569ed226b2fb5c4f13824410b8d5a89c6098b4329",
+  "baseline_reference_architecture": "x86_64",
+  "baseline_reference_python": "3.12.11",
+  "shap_architecture": "arm64",
+  "shap_settings": {
+    "background_rows": 100,
+    "max_evals": 1000,
+    "n_chunks": 32,
+    "seed": 42
+  },
+  "target_datasets": {
+    "cardiovascular": {
+      "n_rows": 2112,
+      "n_predictors": 20,
+      "dataset_fingerprint": "9143403c8d4eff526d091f51e43b41df4c8a6b6f042a0ef383d8cf42f54b556f",
+      "model_sha256": "95e0795d38661cbd3d5976c66286ee41bd7fc72b5ed2fd556f7184fc7aba9655"
+    },
+    "mental_health": {
+      "n_rows": 1389,
+      "n_predictors": 22,
+      "dataset_fingerprint": "370b1e113ebcbfc5c077df41069abdff40ade5f5ed57c17332bef7a3245e151a",
+      "model_sha256": "17cc1a4e7e08b6aa391462ea206e91a1dfd6baa5d72f747e5cf006da7db9e8b5"
+    },
+    "respiratory": {
+      "n_rows": 2112,
+      "n_predictors": 22,
+      "dataset_fingerprint": "a9a0bb55b6d6def61af317c14960c445f6625d67ab5ca8e4c16df9665c2a7871",
+      "model_sha256": "3dce79c0019c6022fac857cc9f36da0899ed7e99852e3dc16846ffde8f33020e"
+    }
+  },
+  "shap_python": "3.12.14",
+  "shap_validation": {
+    "cardiovascular": {
+      "n_rows": 2112,
+      "n_features": 20,
+      "all_values_finite": true,
+      "max_additivity_error_csv": 1.3877787807814457e-15,
+      "top5": [
+        "age_bin",
+        "education_level",
+        "length_n-s",
+        "building_height",
+        "income"
+      ]
+    },
+    "mental_health": {
+      "n_rows": 1389,
+      "n_features": 22,
+      "all_values_finite": true,
+      "max_additivity_error_csv": 2.4424906541753444e-15,
+      "top5": [
+        "age_bin",
+        "building_height",
+        "pervious_surface_cover_fraction",
+        "length_se-nw",
+        "length_ne-sw"
+      ],
+      "permutation_vs_exact_rank_spearman": 1.0,
+      "max_mean_abs_shap_difference_vs_exact": 0.00024324029276739934,
+      "relative_L1_mean_abs_shap_difference_vs_exact": 0.004457278214901788,
+      "exact_top5": [
+        "age_bin",
+        "building_height",
+        "pervious_surface_cover_fraction",
+        "length_se-nw",
+        "length_ne-sw"
+      ]
+    },
+    "respiratory": {
+      "n_rows": 2112,
+      "n_features": 22,
+      "all_values_finite": true,
+      "max_additivity_error_csv": 1.0269562977782698e-15,
+      "top5": [
+        "age_bin",
+        "length_se-nw",
+        "education_level",
+        "length_n-s",
+        "noisenight"
+      ]
+    }
+  },
+  "morphology_sha256": "1f8321acccfbe788b17a0cabafd383c7547889341a70eee6f948c16db15dc516",
+  "dataset_fingerprint_method": "SHA256 of pandas 2.3.3 hash_pandas_object(data, index=True) bytes; schema checked separately",
+  "reference_analysis_commit": "d5d69d2d6c7253b27d318e8dd674340d67449f9a",
+  "numeric_versions": {
+    "numpy": "2.3.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.6.1",
+    "scipy": "1.16.3",
+    "statsmodels": "0.14.6",
+    "joblib": "1.5.3",
+    "shap": "0.50.0"
+  }
+}

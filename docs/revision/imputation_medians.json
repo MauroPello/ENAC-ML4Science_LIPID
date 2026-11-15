@@ -1,0 +1,86 @@
+[
+  {
+    "target": "cardiovascular",
+    "feature": "income",
+    "missing_merged": 290,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "target": "cardiovascular",
+    "feature": "education_level",
+    "missing_merged": 23,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "target": "mental_health",
+    "feature": "income",
+    "missing_merged": 290,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "target": "mental_health",
+    "feature": "education_level",
+    "missing_merged": 23,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "target": "respiratory",
+    "feature": "income",
+    "missing_merged": 290,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "target": "respiratory",
+    "feature": "education_level",
+    "missing_merged": 23,
+    "full_merged_median": 2.0,
+    "outer_train_median": 2.0,
+    "inner_train_medians": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  }
+]

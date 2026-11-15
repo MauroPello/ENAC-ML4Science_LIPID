@@ -1,0 +1,89 @@
+{
+  "python": "3.12.14",
+  "architecture": "arm64",
+  "platform": "macOS-26.7.2-arm64-arm-64bit",
+  "packages": {
+    "numpy": "2.3.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.6.1",
+    "scipy": "1.16.3",
+    "joblib": "1.5.3",
+    "statsmodels": "0.14.6"
+  },
+  "workbook_sha256": "e3b9a6e7781b6e4adcd5e32569ed226b2fb5c4f13824410b8d5a89c6098b4329",
+  "morphology_sha256": "1f8321acccfbe788b17a0cabafd383c7547889341a70eee6f948c16db15dc516",
+  "script_sha256": {
+    "_rebuild.py": "49482df8656ba78bd7c386a2a7de75a37408a8cc68a2e7b82af3a7ce39218aa4",
+    "inference.py": "5674206c4f4c38583c0845de610e5481c9c363debec980f9be53b1138de749e2",
+    "screening_leakage_check.py": "23626ce38c606cd7437f2f5eb460ee0c8a944b056b429c66b16589ca261abcc6",
+    "shap_analysis.py": "5b23ffa1ee08936d539a243e2b4120f7da2186938180e71f48c8554624b55b09",
+    "shap_sensitivity.py": "3224269b7d1fe230470532a4c2d1d8f133bca34f9f839d5e09fa04534993232f",
+    "sociodemographic_baseline.py": "54153bf66ad4aec8856f885f7ec93c3a97a663b7d253fd52e8e896e70459c7d0"
+  },
+  "datasets": {
+    "cardiovascular": {
+      "fingerprint": "9143403c8d4eff526d091f51e43b41df4c8a6b6f042a0ef383d8cf42f54b556f",
+      "n_rows": 2112,
+      "n_test": 423,
+      "n_test_positive": 41,
+      "train_indices_sha256": "46c043386cafe311d39727506c8dc45e358e04972d67f66a9fe4b23b33596653",
+      "test_indices_sha256": "e658f991c5ad1b5146144032c30d4b52036952d230cdd591d5e2465563eb9886",
+      "model_sha256": "95e0795d38661cbd3d5976c66286ee41bd7fc72b5ed2fd556f7184fc7aba9655"
+    },
+    "mental_health": {
+      "fingerprint": "370b1e113ebcbfc5c077df41069abdff40ade5f5ed57c17332bef7a3245e151a",
+      "n_rows": 1389,
+      "n_test": 278,
+      "n_test_positive": 68,
+      "train_indices_sha256": "940f7c6fc5cf9e407041f30dba0c935740eb9a83d2fd2ef481369a9d606f65a4",
+      "test_indices_sha256": "4bde02cd1b1eff419d14096bd9953621611429617beb0ff8764865a929ff1861",
+      "model_sha256": "17cc1a4e7e08b6aa391462ea206e91a1dfd6baa5d72f747e5cf006da7db9e8b5"
+    },
+    "respiratory": {
+      "fingerprint": "a9a0bb55b6d6def61af317c14960c445f6625d67ab5ca8e4c16df9665c2a7871",
+      "n_rows": 2112,
+      "n_test": 423,
+      "n_test_positive": 16,
+      "train_indices_sha256": "e104bf07307bb30780b4cb269b718491e5c8630b5989cc9a851b4d9fdae4a249",
+      "test_indices_sha256": "7f2dbc9c9001742b89403a39762a47ac9e9e42bf1ecdbb178518e524ddad8671",
+      "model_sha256": "3dce79c0019c6022fac857cc9f36da0899ed7e99852e3dc16846ffde8f33020e"
+    }
+  },
+  "settings": {
+    "background_rows": 100,
+    "max_evals": 1000,
+    "n_chunks": 32,
+    "seed": 42,
+    "additivity_tolerance": 1e-06,
+    "shap_version": "0.50.0",
+    "validation": {
+      "cardiovascular": {
+        "base_value": 0.09487122896902575,
+        "mean_prediction": 0.09956735533722723,
+        "max_additivity_error": 1.3877787807814457e-15
+      },
+      "mental_health": {
+        "base_value": 0.3752105540453881,
+        "mean_prediction": 0.3450509090524329,
+        "max_additivity_error": 2.4424906541753444e-15,
+        "exact_tree_max_additivity_error": 1.3387421837762759e-08,
+        "permutation_exact_rank_spearman": 1.0,
+        "relative_L1_mean_abs_difference": 0.004457278214901062
+      },
+      "respiratory": {
+        "base_value": 0.03699282895023493,
+        "mean_prediction": 0.03918923338008323,
+        "max_additivity_error": 1.0269562977782698e-15
+      }
+    },
+    "explained_output": "positive-class probability",
+    "explained_cohort": "full fitted cohort",
+    "permutation_values_source_commit": "d5d69d2d6c7253b27d318e8dd674340d67449f9a",
+    "previously_computed_values_sha256": {
+      "cardiovascular": "db28e90963d8494414d303caa6d21b7091a87d33e4ee1b8dff9008f308b242dd",
+      "mental_health": "d68e23f398059b5fa9202944e7f5eaf9c93362887b38637c527b1e457fe8bfd7",
+      "respiratory": "a43e0d3cf5e5501ef5d98afe80c4499fff4325e0b276e399fc72e8cfaff99594"
+    },
+    "validation_note": "Full-cohort permutation values from the original run were revalidated and summarized with corrected code; exact TreeSHAP was recomputed."
+  }
+}

@@ -19,6 +19,10 @@ python -m ipykernel install --user --name mlenv
 - Experiments: supervised notebook in [main.ipynb](main.ipynb); unsupervised in [notebooks/unsupervised_analysis.ipynb](notebooks/unsupervised_analysis.ipynb); ablations in [notebooks/ablation_study](notebooks/ablation_study).
 - Artifacts: trained models/configs in [outputs](outputs); ablation predictions in [data/ablation](data/ablation); raw/clean data in [data](data).
 
+## Co-author revision analyses
+
+Verified SHAP values, sociodemographic baselines, screening sensitivity, methodological confirmations, and reproduction instructions are in [docs/revision](docs/revision/README.md). These analyses use the original saved models and private health workbook.
+
 ## Data inputs
 - Data under `data/`:
 	- `data/morphology_data_cleaned.csv`: cleaned morphology per neighborhood (real, post-processed).
